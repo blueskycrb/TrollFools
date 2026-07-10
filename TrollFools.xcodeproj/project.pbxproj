@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		6124A06D2CD2322400C52253 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6124A06C2CD2322400C52253 /* App.swift */; };
 		6124A06F2CD2324200C52253 /* AppListModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6124A06E2CD2324200C52253 /* AppListModel.swift */; };
+		71314BDD6A204238B5795A25 /* AutoInjectionProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDB2D2667734CC89019D91A /* AutoInjectionProfile.swift */; };
+		68BA3462380844FCBC996B3E /* AutoInjectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9814153E5E147C0854A36B0 /* AutoInjectionStore.swift */; };
+		A6B7D8993C7E49B7A5C4A875 /* AutoReinjectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E891B12FAC194FBD82EA1BE1 /* AutoReinjectManager.swift */; };
 		6124A0712CD2326500C52253 /* FilterOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6124A0702CD2326500C52253 /* FilterOptions.swift */; };
 		6124A0742CD2328600C52253 /* AppListCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6124A0732CD2328600C52253 /* AppListCell.swift */; };
 		6124A0762CD232C600C52253 /* Option.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6124A0752CD232C600C52253 /* Option.swift */; };
@@ -146,6 +149,9 @@
 /* Begin PBXFileReference section */
 		6124A06C2CD2322400C52253 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		6124A06E2CD2324200C52253 /* AppListModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppListModel.swift; sourceTree = "<group>"; };
+		ECDB2D2667734CC89019D91A /* AutoInjectionProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoInjectionProfile.swift; sourceTree = "<group>"; };
+		F9814153E5E147C0854A36B0 /* AutoInjectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoInjectionStore.swift; sourceTree = "<group>"; };
+		E891B12FAC194FBD82EA1BE1 /* AutoReinjectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoReinjectManager.swift; sourceTree = "<group>"; };
 		6124A0702CD2326500C52253 /* FilterOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterOptions.swift; sourceTree = "<group>"; };
 		6124A0732CD2328600C52253 /* AppListCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppListCell.swift; sourceTree = "<group>"; };
 		6124A0752CD232C600C52253 /* Option.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Option.swift; sourceTree = "<group>"; };
@@ -283,6 +289,9 @@
 				6124A06C2CD2322400C52253 /* App.swift */,
 				CCD3FCA92E7033A300AEF7F0 /* App+Ads.swift */,
 				6124A06E2CD2324200C52253 /* AppListModel.swift */,
+				ECDB2D2667734CC89019D91A /* AutoInjectionProfile.swift */,
+				F9814153E5E147C0854A36B0 /* AutoInjectionStore.swift */,
+				E891B12FAC194FBD82EA1BE1 /* AutoReinjectManager.swift */,
 				614C0C672D7C72AC007E9184 /* AppListSearchModel.swift */,
 				6124A0802CD233DA00C52253 /* EjectListModel.swift */,
 				CCF350A12D7DE50800826516 /* EjectListSearchModel.swift */,
@@ -692,6 +701,9 @@
 				61EFA37B2D31165700159442 /* InjectorV3+Backup.swift in Sources */,
 				61EFA3712D3033BB00159442 /* InjectorV3+Error.swift in Sources */,
 				6124A06F2CD2324200C52253 /* AppListModel.swift in Sources */,
+				71314BDD6A204238B5795A25 /* AutoInjectionProfile.swift in Sources */,
+				68BA3462380844FCBC996B3E /* AutoInjectionStore.swift in Sources */,
+				A6B7D8993C7E49B7A5C4A875 /* AutoReinjectManager.swift in Sources */,
 				CCB6A1192C4A58C7000D75B0 /* OptionView.swift in Sources */,
 				CCF4706E2C4A4BAB008D8197 /* AppListView.swift in Sources */,
 				614C0C6C2D7D72D4007E9184 /* IndexableScroller.swift in Sources */,

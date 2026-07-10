@@ -13,8 +13,11 @@ struct TrollFoolsApp: SwiftUI.App {
     @AppStorage("isDisclaimerHiddenV2")
     var isDisclaimerHidden: Bool = false
 
+    @StateObject private var appList: AppListModel
+
     init() {
         try? FileManager.default.removeItem(at: InjectorV3.temporaryRoot)
+        _appList = StateObject(wrappedValue: AppListModel())
     }
 
     var body: some Scene {
@@ -22,8 +25,11 @@ struct TrollFoolsApp: SwiftUI.App {
             ZStack {
                 if isDisclaimerHidden {
                     AppListView()
-                        .environmentObject(AppListModel())
+                        .environmentObject(appList)
                         .transition(.opacity)
+                        .onAppear {
+                            AutoReinjectManager.shared.schedule(after: 1)
+                        }
                 } else {
                     DisclaimerView(isDisclaimerHidden: $isDisclaimerHidden)
                         .transition(.opacity)

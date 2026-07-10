@@ -22,7 +22,7 @@ extension InjectorV3 {
         if shouldDesist {
             assetURLs = persistedAssetURLs(bid: appID)
             if !assetURLs.isEmpty {
-                desist(assetURLs)
+                try desistThrowing(assetURLs)
             }
         }
     }
@@ -32,7 +32,7 @@ extension InjectorV3 {
         terminateApp()
 
         if shouldDesist {
-            desist(assetURLs)
+            try desistThrowing(assetURLs)
         } else {
             persistIfNecessary(assetURLs)
         }

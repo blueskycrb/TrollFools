@@ -27,7 +27,8 @@ extension InjectorV3 {
 
     // MARK: - Instance Methods
 
-    func inject(_ assetURLs: [URL], shouldPersist: Bool) throws {
+    @discardableResult
+    func inject(_ assetURLs: [URL], shouldPersist: Bool) throws -> [URL] {
         didUseMachOEnumerationFallback = false
         let preparedAssetURLs = try preprocessAssets(assetURLs)
 
@@ -43,6 +44,8 @@ extension InjectorV3 {
         if shouldPersist {
             try persist(preparedAssetURLs)
         }
+
+        return preparedAssetURLs
     }
 
     // MARK: - Private Methods

@@ -29,9 +29,16 @@ extension InjectorV3 {
     }
 
     func desist(_ assetURLs: [URL]) {
+        try? desistThrowing(assetURLs)
+    }
+
+    func desistThrowing(_ assetURLs: [URL]) throws {
         for filteredURL in filteredURLs(assetURLs) {
             let destURL = persistentPlugInsDirectoryURL.appendingPathComponent(filteredURL.lastPathComponent)
-            try? cmdRemove(destURL, recursively: checkIsDirectory(destURL))
+            guard FileManager.default.fileExists(atPath: destURL.path) else {
+                continue
+            }
+            try cmdRemove(destURL, recursively: checkIsDirectory(destURL))
         }
     }
 
