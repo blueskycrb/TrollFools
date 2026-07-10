@@ -16,7 +16,6 @@ final class App: ObservableObject {
     let teamID: String
     let url: URL
     let version: String?
-    let isAdvertisement: Bool
 
     @Published var isDetached: Bool
     @Published var isAllowedToAttachOrDetach: Bool
@@ -43,8 +42,7 @@ final class App: ObservableObject {
         teamID: String,
         url: URL,
         version: String? = nil,
-        alternateIcon: UIImage? = nil,
-        isAdvertisement: Bool = false
+        alternateIcon: UIImage? = nil
     ) {
         self.bid = bid
         self.name = name
@@ -57,7 +55,6 @@ final class App: ObservableObject {
         self.isInjected = InjectorV3.main.checkIsInjectedAppBundle(url)
         self.hasPersistedAssets = InjectorV3.main.hasPersistedAssets(bid: bid)
         self.alternateIcon = alternateIcon
-        self.isAdvertisement = isAdvertisement
         self.latinName = name
             .applyingTransform(.toLatin, reverse: false)?
             .applyingTransform(.stripDiacritics, reverse: false)?
