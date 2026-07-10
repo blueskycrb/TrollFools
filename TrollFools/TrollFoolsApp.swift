@@ -13,6 +13,8 @@ struct TrollFoolsApp: SwiftUI.App {
     @AppStorage("isDisclaimerHiddenV2")
     var isDisclaimerHidden: Bool = false
 
+    @Environment(\.scenePhase) private var scenePhase
+
     @StateObject private var appList: AppListModel
 
     init() {
@@ -36,6 +38,10 @@ struct TrollFoolsApp: SwiftUI.App {
                 }
             }
             .animation(.easeInOut, value: isDisclaimerHidden)
+            .onChange(of: scenePhase) { phase in
+                guard phase == .active, isDisclaimerHidden else { return }
+                AutoReinjectManager.shared.schedule(after: 0.5)
+            }
         }
     }
 }

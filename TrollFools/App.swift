@@ -72,6 +72,10 @@ final class App: ObservableObject {
         Self.reloadSubject.send(bid)
     }
 
+    static func reload(bundleIdentifier: String) {
+        reloadSubject.send(bundleIdentifier)
+    }
+
     private func _reload() {
         reloadDetachedStatus()
         reloadInjectedStatus()

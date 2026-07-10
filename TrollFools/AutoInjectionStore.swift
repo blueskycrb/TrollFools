@@ -143,6 +143,9 @@ final class AutoInjectionStore {
             profile.lastSuccessfulInjection = Date()
             profile.lastError = nil
         }
+        _ = AutoReinjectManager.shared.localAutoInjectDirectory(
+            bundleIdentifier: bundleIdentifier
+        )
     }
 
     func setAutoReinjectEnabled(bundleIdentifier: String, enabled: Bool) {
