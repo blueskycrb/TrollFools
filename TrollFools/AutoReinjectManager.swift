@@ -34,6 +34,7 @@ final class AutoReinjectManager {
     private let inboxResultFileName = "_LastResult.txt"
     private let inboxTargetFileName = "_TargetApp.txt"
     private let lastScanFileName = "_LastScan.txt"
+    private let installedAppsFileName = "_InstalledApps.txt"
 
     private init() {
         prepareLocalAutoInjectDirectory()
@@ -148,8 +149,50 @@ final class AutoReinjectManager {
             try? instructions.write(to: readmeURL, atomically: true, encoding: .utf8)
         }
 
+        prepareInstalledApplicationDirectories()
+
         for profile in AutoInjectionStore.shared.allProfiles() {
             _ = localAutoInjectDirectory(bundleIdentifier: profile.bundleIdentifier)
+        }
+    }
+
+    private func prepareInstalledApplicationDirectories() {
+        let ignoredPrefixes = ["com.apple.", "wiki.qaq.", "com.82flex.", "ch.xxtou."]
+        var catalogEntries = [(name: String, bundleIdentifier: String)]()
+
+        for proxy in LSApplicationWorkspace.default().allApplications() {
+            guard let bundleIdentifier = proxy.applicationIdentifier(),
+                  !bundleIdentifier.isEmpty,
+                  !ignoredPrefixes.contains(where: { bundleIdentifier.hasPrefix($0) }),
+                  let bundleURL = proxy.bundleURL(),
+                  bundleURL.pathExtension.lowercased() == "app"
+            else {
+                continue
+            }
+
+            let displayName = proxy.localizedName() ?? bundleIdentifier
+            _ = localAutoInjectDirectory(
+                bundleIdentifier: bundleIdentifier,
+                displayName: displayName
+            )
+            catalogEntries.append((displayName, bundleIdentifier))
+        }
+
+        let catalog = catalogEntries
+            .sorted { lhs, rhs in
+                lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+            .map { "\($0.name)\n  \($0.bundleIdentifier)" }
+            .joined(separator: "\n\n")
+        let contents = """
+        TrollFools detected these installed third-party applications.
+        A Bundle ID folder is created automatically for every entry.
+
+        \(catalog)
+        """
+        let catalogURL = Self.localAutoInjectRootURL.appendingPathComponent(installedAppsFileName)
+        if (try? String(contentsOf: catalogURL, encoding: .utf8)) != contents {
+            try? contents.write(to: catalogURL, atomically: true, encoding: .utf8)
         }
     }
 
