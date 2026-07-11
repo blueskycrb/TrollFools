@@ -12,8 +12,8 @@ final class AutoReinjectManager {
     static let shared = AutoReinjectManager()
 
     // Resolve these paths every time instead of caching them during early app startup.
-    // TrollFools is a no-container/platform application, so LaunchServices may not have
-    // registered its Files.app data container yet when the singleton is first initialized.
+    // LaunchServices may not have registered TrollFools' Files.app data container yet
+    // when the singleton is first initialized.
     // Scanning every valid candidate also keeps older folders working after an update.
     static var localAutoInjectRootURLs: [URL] {
         let fileManager = FileManager.default
