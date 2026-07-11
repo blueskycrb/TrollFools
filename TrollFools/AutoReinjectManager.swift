@@ -11,25 +11,46 @@ import Foundation
 final class AutoReinjectManager {
     static let shared = AutoReinjectManager()
 
-    static let localAutoInjectRootURL: URL = {
-        // TrollFools is signed as a no-container/platform application. In that mode,
-        // FileManager's user-domain Documents directory may resolve to /var/mobile/Documents
-        // instead of the app data container exposed by Files.app. Always ask LaunchServices
-        // for TrollFools' real data container first so both sides use the same folder.
+    // Resolve these paths every time instead of caching them during early app startup.
+    // TrollFools is a no-container/platform application, so LaunchServices may not have
+    // registered its Files.app data container yet when the singleton is first initialized.
+    // Scanning every valid candidate also keeps older folders working after an update.
+    static var localAutoInjectRootURLs: [URL] {
+        let fileManager = FileManager.default
+        var candidates = [URL]()
+
+        func appendDocumentsURL(_ documentsURL: URL) {
+            let rootURL = documentsURL.appendingPathComponent("AutoInject", isDirectory: true)
+            let path = rootURL.standardizedFileURL.path
+            guard !candidates.contains(where: { $0.standardizedFileURL.path == path }) else {
+                return
+            }
+            candidates.append(rootURL)
+        }
+
         if let proxy = LSApplicationProxy(forIdentifier: Constants.gAppIdentifier),
            let dataContainerURL = proxy.dataContainerURL()
         {
-            return dataContainerURL
-                .appendingPathComponent("Documents", isDirectory: true)
-                .appendingPathComponent("AutoInject", isDirectory: true)
+            appendDocumentsURL(
+                dataContainerURL.appendingPathComponent("Documents", isDirectory: true)
+            )
         }
 
-        let documentsURL = FileManager.default.urls(
-            for: .documentDirectory,
-            in: .userDomainMask
-        ).first!
-        return documentsURL.appendingPathComponent("AutoInject", isDirectory: true)
-    }()
+        for documentsURL in fileManager.urls(for: .documentDirectory, in: .userDomainMask) {
+            appendDocumentsURL(documentsURL)
+        }
+
+        appendDocumentsURL(
+            URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+                .appendingPathComponent("Documents", isDirectory: true)
+        )
+
+        return candidates
+    }
+
+    static var localAutoInjectRootURL: URL {
+        localAutoInjectRootURLs[0]
+    }
 
     private struct LocalInboxState: Codable {
         var fingerprints: [String: String] = [:]
@@ -81,13 +102,11 @@ final class AutoReinjectManager {
         bundleIdentifier: String,
         displayName: String? = nil
     ) -> URL {
-        let url = Self.localAutoInjectRootURL
-            .appendingPathComponent(bundleIdentifier, isDirectory: true)
+        let rootURLs = Self.localAutoInjectRootURLs
         let fileManager = FileManager.default
-        try? fileManager.createDirectory(at: url, withIntermediateDirectories: true)
-
-        if let displayName, !displayName.isEmpty {
-            let targetDescription = """
+        let targetDescription: String? = {
+            guard let displayName, !displayName.isEmpty else { return nil }
+            return """
             Target app: \(displayName)
             Bundle ID: \(bundleIdentifier)
 
@@ -95,13 +114,21 @@ final class AutoReinjectManager {
             Subfolders are supported. Open TrollFools and keep it in the foreground
             for about 8 seconds; injection will start automatically.
             """
-            try? targetDescription.write(
-                to: url.appendingPathComponent(inboxTargetFileName),
-                atomically: true,
-                encoding: .utf8
-            )
+        }()
+
+        for rootURL in rootURLs {
+            let url = rootURL.appendingPathComponent(bundleIdentifier, isDirectory: true)
+            try? fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+            if let targetDescription {
+                try? targetDescription.write(
+                    to: url.appendingPathComponent(inboxTargetFileName),
+                    atomically: true,
+                    encoding: .utf8
+                )
+            }
         }
-        return url
+
+        return rootURLs[0].appendingPathComponent(bundleIdentifier, isDirectory: true)
     }
 
     private func reconcileAll(attempt: Int) {
@@ -139,29 +166,45 @@ final class AutoReinjectManager {
 
     private func prepareLocalAutoInjectDirectory() {
         let fileManager = FileManager.default
-        try? fileManager.createDirectory(
-            at: Self.localAutoInjectRootURL,
-            withIntermediateDirectories: true
-        )
+        let rootURLs = Self.localAutoInjectRootURLs
 
-        let readmeURL = Self.localAutoInjectRootURL.appendingPathComponent("README.txt")
-        if !fileManager.fileExists(atPath: readmeURL.path) {
-            let instructions = """
-            TrollFools Local Auto-Inject Folder
+        for rootURL in rootURLs {
+            try? fileManager.createDirectory(at: rootURL, withIntermediateDirectories: true)
 
-            1. TrollFools automatically creates a folder for every supported installed app.
-               The folder name is the target app Bundle ID, for example com.example.app.
-            2. Put .dylib, .deb, .zip, .framework, or .bundle files into that folder.
-               Subfolders are supported.
-            3. Open or return to TrollFools and keep it in front for about 8 seconds.
-               It scans several times and injects automatically.
-            4. Unchanged files are not injected repeatedly. Replacing a file triggers reinjection.
-            5. After an app update, enabled plug-ins are restored by automatic reinjection.
+            let readmeURL = rootURL.appendingPathComponent("README.txt")
+            if !fileManager.fileExists(atPath: readmeURL.path) {
+                let instructions = """
+                TrollFools Local Auto-Inject Folder
 
-            iOS does not allow a normal app to run forever in the background. If TrollFools is
-            fully closed, open it again to scan this folder and perform automatic injection.
+                1. TrollFools automatically creates a folder for every supported installed app.
+                   The folder name is the target app Bundle ID, for example com.example.app.
+                2. Put .dylib, .deb, .zip, .framework, or .bundle files into that folder.
+                   Subfolders are supported.
+                3. Open or return to TrollFools and keep it in front for about 8 seconds.
+                   It scans several times and injects automatically.
+                4. Unchanged files are not injected repeatedly. Replacing a file triggers reinjection.
+                5. After an app update, enabled plug-ins are restored by automatic reinjection.
+
+                iOS does not allow a normal app to run forever in the background. If TrollFools is
+                fully closed, open it again to scan this folder and perform automatic injection.
+                """
+                try? instructions.write(to: readmeURL, atomically: true, encoding: .utf8)
+            }
+
+            let diagnostics = """
+            TrollFools auto-inject path diagnostics
+            Generated: \(Date())
+            App version: \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"))
+            This folder: \(rootURL.path)
+
+            All paths checked by TrollFools:
+            \(rootURLs.map(\.path).joined(separator: "\n"))
             """
-            try? instructions.write(to: readmeURL, atomically: true, encoding: .utf8)
+            try? diagnostics.write(
+                to: rootURL.appendingPathComponent("_PathDiagnostics.txt"),
+                atomically: true,
+                encoding: .utf8
+            )
         }
 
         prepareInstalledApplicationDirectories()
@@ -205,9 +248,11 @@ final class AutoReinjectManager {
 
         \(catalog)
         """
-        let catalogURL = Self.localAutoInjectRootURL.appendingPathComponent(installedAppsFileName)
-        if (try? String(contentsOf: catalogURL, encoding: .utf8)) != contents {
-            try? contents.write(to: catalogURL, atomically: true, encoding: .utf8)
+        for rootURL in Self.localAutoInjectRootURLs {
+            let catalogURL = rootURL.appendingPathComponent(installedAppsFileName)
+            if (try? String(contentsOf: catalogURL, encoding: .utf8)) != contents {
+                try? contents.write(to: catalogURL, atomically: true, encoding: .utf8)
+            }
         }
     }
 
@@ -218,9 +263,22 @@ final class AutoReinjectManager {
     }
 
     private func importLocalAutoInjectAssets() -> LocalImportSummary {
+        var combinedSummary = LocalImportSummary()
+
+        for rootURL in Self.localAutoInjectRootURLs {
+            let summary = importLocalAutoInjectAssets(from: rootURL)
+            combinedSummary.shouldRetry = combinedSummary.shouldRetry || summary.shouldRetry
+            combinedSummary.targetFolderCount += summary.targetFolderCount
+            combinedSummary.sourceCount += summary.sourceCount
+        }
+
+        return combinedSummary
+    }
+
+    private func importLocalAutoInjectAssets(from rootURL: URL) -> LocalImportSummary {
         let fileManager = FileManager.default
         guard let folders = try? fileManager.contentsOfDirectory(
-            at: Self.localAutoInjectRootURL,
+            at: rootURL,
             includingPropertiesForKeys: [.isDirectoryKey],
             options: [.skipsHiddenFiles]
         ) else {
@@ -406,11 +464,13 @@ final class AutoReinjectManager {
         After copying files, keep TrollFools in the foreground for about 8 seconds.
         See _LastResult.txt inside the target Bundle ID folder for injection results.
         """
-        try? message.write(
-            to: Self.localAutoInjectRootURL.appendingPathComponent(lastScanFileName),
-            atomically: true,
-            encoding: .utf8
-        )
+        for rootURL in Self.localAutoInjectRootURLs {
+            try? message.write(
+                to: rootURL.appendingPathComponent(lastScanFileName),
+                atomically: true,
+                encoding: .utf8
+            )
+        }
     }
 
     private func loadInboxState(folderURL: URL) -> LocalInboxState {
