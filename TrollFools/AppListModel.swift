@@ -93,6 +93,13 @@ final class AppListModel: ObservableObject {
             }
             .store(in: &cancellables)
 
+        applicationChanged
+            .debounce(for: 8, scheduler: DispatchQueue.main)
+            .sink { _ in
+                AutoReinjectManager.shared.schedule(after: 0)
+            }
+            .store(in: &cancellables)
+
         // Uses notify_register_dispatch instead of CFNotificationCenterAddObserver to avoid
         // Unmanaged pointer management. Unlike CFNotificationCenterAddObserver with .coalesce,
         // notify_register_dispatch may deliver queued notifications individually upon app resume,
@@ -110,7 +117,17 @@ final class AppListModel: ObservableObject {
 
     func reload() {
         let allApplications = Self.fetchApplications(&unsupportedCount)
-        allApplications.forEach { $0.appList = self }
+        allApplications.forEach { app in
+            app.appList = self
+            guard app.isInjected || app.hasPersistedAssets else { return }
+            AutoInjectionStore.shared.bootstrapProfile(
+                bundleIdentifier: app.bid,
+                bundleURL: app.url,
+                shortVersion: app.version,
+                injectedURLs: InjectorV3.main.injectedAssetURLsInBundle(app.url),
+                persistedURLs: InjectorV3.main.persistedAssetURLs(bid: app.bid)
+            )
+        }
         _allApplications = allApplications
         performFilter()
     }

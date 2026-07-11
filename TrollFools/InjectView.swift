@@ -137,7 +137,17 @@ struct InjectView: View {
             injector.useFrameworkEnumerationFallback = useFrameworkEnumerationFallback
             injector.injectStrategy = injectStrategy
 
-            try injector.inject(urlList, shouldPersist: true)
+            let preparedURLs = try injector.inject(urlList, shouldPersist: true)
+            AutoInjectionStore.shared.recordInjection(
+                bundleIdentifier: app.bid,
+                bundleURL: app.url,
+                shortVersion: app.version,
+                preparedURLs: preparedURLs,
+                useWeakReference: useWeakReference,
+                preferMainExecutable: preferMainExecutable,
+                useFrameworkEnumerationFallback: useFrameworkEnumerationFallback,
+                injectStrategy: injectStrategy
+            )
             return .success(SuccessPayload(
                 logFileURL: injector.latestLogFileURL,
                 didUseFallback: injector.didUseMachOEnumerationFallback

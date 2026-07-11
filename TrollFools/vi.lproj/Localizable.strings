@@ -309,3 +309,6 @@
 
 /* No comment provided by engineer. */
 "You’ve selected at least one Debian Package “%@”. We’re here to remind you that it will not work as it was in a jailbroken environment. Please make sure you know what you’re doing." = "Bạn đã chọn ít nhất một Gói Debian “%@”. Chúng tôi xin nhắc bạn rằng gói này sẽ không hoạt động như khi sử dụng trong môi trường đã bẻ khóa. Vui lòng đảm bảo bạn biết rõ mình đang làm gì.";
+
+"Automatically Reinject After App Updates" = "Tự động chèn lại sau khi ứng dụng cập nhật";
+"When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened." = "Khi bản cập nhật thay thế ứng dụng, TrollFools chỉ khôi phục các tiện ích đã được bật. Nếu TrollFools không chạy, việc khôi phục sẽ diễn ra ở lần mở tiếp theo.";

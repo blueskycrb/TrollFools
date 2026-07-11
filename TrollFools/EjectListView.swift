@@ -363,8 +363,13 @@ struct EjectListView: View {
             }
 
             if !disabledURLsToRemove.isEmpty {
-                injector.desist(disabledURLsToRemove)
+                try injector.desistThrowing(disabledURLsToRemove)
             }
+
+            AutoInjectionStore.shared.removePlugins(
+                bundleIdentifier: ejectList.app.bid,
+                fileNames: plugInsToRemove.map { $0.url.lastPathComponent }
+            )
 
             ejectList.app.reload()
             ejectList.reload()
@@ -413,6 +418,12 @@ struct EjectListView: View {
             } else {
                 try injector.inject(plugInURLsToProcess, shouldPersist: false)
             }
+
+            AutoInjectionStore.shared.setPluginEnabled(
+                bundleIdentifier: ejectList.app.bid,
+                fileName: plugIn.url.lastPathComponent,
+                enabled: !plugIn.isEnabled
+            )
 
             ejectList.app.reload()
             ejectList.reload()
@@ -483,6 +494,11 @@ struct EjectListView: View {
 
                 do {
                     try injector.inject(disabledPlugInURLs, shouldPersist: false)
+                    AutoInjectionStore.shared.setPluginsEnabled(
+                        bundleIdentifier: ejectList.app.bid,
+                        fileNames: disabledPlugInURLs.map { $0.lastPathComponent },
+                        enabled: true
+                    )
                 } catch {
                     DispatchQueue.main.async {
                         DDLogError("\(error)", ddlog: InjectorV3.main.logger)
@@ -513,6 +529,7 @@ struct EjectListView: View {
     }
 
     private func deleteAll(shouldDesist: Bool) {
+        let plugInNames = ejectList.injectedPlugIns.map { $0.url.lastPathComponent }
         var logFileURL: URL?
 
         do {
@@ -557,6 +574,18 @@ struct EjectListView: View {
 
                 do {
                     try injector.ejectAll(shouldDesist: shouldDesist)
+                    if shouldDesist {
+                        AutoInjectionStore.shared.removePlugins(
+                            bundleIdentifier: ejectList.app.bid,
+                            fileNames: plugInNames
+                        )
+                    } else {
+                        AutoInjectionStore.shared.setPluginsEnabled(
+                            bundleIdentifier: ejectList.app.bid,
+                            fileNames: plugInNames,
+                            enabled: false
+                        )
+                    }
                 } catch {
                     DispatchQueue.main.async {
                         DDLogError("\(error)", ddlog: InjectorV3.main.logger)

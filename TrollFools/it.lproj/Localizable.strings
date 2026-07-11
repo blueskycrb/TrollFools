@@ -309,3 +309,6 @@
 
 /* TODO */
 "You’ve selected at least one Debian Package “%@”. We’re here to remind you that it will not work as it was in a jailbroken environment. Please make sure you know what you’re doing." = "You’ve selected at least one Debian Package “%@”. We’re here to remind you that it will not work as it was in a jailbroken environment. Please make sure you know what you’re doing.";
+
+"Automatically Reinject After App Updates" = "Reinietta automaticamente dopo gli aggiornamenti";
+"When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened." = "Quando un aggiornamento sostituisce l'app, TrollFools ripristina solo i plug-in che erano abilitati. Se TrollFools non era in esecuzione, il ripristino avviene alla successiva apertura.";

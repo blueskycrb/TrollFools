@@ -9,6 +9,17 @@ import CocoaLumberjackSwift
 import Foundation
 
 enum Execute {
+    private struct SpawnError: LocalizedError {
+        let binary: String
+        let receipt: AuxiliaryExecute.ExecuteReceipt
+
+        var errorDescription: String? {
+            let detail = receipt.stderr.isEmpty
+                ? String(describing: receipt.error ?? .posixSpawnFailed)
+                : receipt.stderr
+            return "Failed to execute \(binary): \(detail)"
+        }
+    }
     @discardableResult
     static func rootSpawn(
         binary: String,
@@ -30,6 +41,9 @@ enum Execute {
         }
         if !receipt.stderr.isEmpty {
             DDLogVerbose("Process \(receipt.pid) error: \(receipt.stderr)", ddlog: ddlog)
+        }
+        if receipt.error != nil {
+            throw SpawnError(binary: binary, receipt: receipt)
         }
         return receipt.terminationReason
     }
@@ -54,6 +68,9 @@ enum Execute {
         }
         if !receipt.stderr.isEmpty {
             DDLogVerbose("Process \(receipt.pid) error: \(receipt.stderr)", ddlog: ddlog)
+        }
+        if receipt.error != nil {
+            throw SpawnError(binary: binary, receipt: receipt)
         }
         return receipt
     }

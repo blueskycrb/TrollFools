@@ -26,20 +26,11 @@ struct AppListView: View {
     @State var temporaryOpenedURL: URLIdentifiable? = nil
 
     @State var latestVersionString: String?
-
-    @AppStorage("isAdvertisementHiddenV2")
-    var isAdvertisementHidden: Bool = false
+    @State var isCreatingAllAutoInjectFolders = false
+    @State var preparedAutoInjectFolderCount: Int?
 
     @AppStorage("isWarningHidden")
     var isWarningHidden: Bool = false
-
-    var shouldShowAdvertisement: Bool {
-        !isAdvertisementHidden &&
-            !appList.filter.isSearching &&
-            !appList.filter.showPatchedOnly &&
-            !appList.isRebuildNeeded &&
-            !appList.isSelectorMode
-    }
 
     var appString: String {
         let appNameString = Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "TrollFools"
@@ -123,10 +114,6 @@ struct AppListView: View {
                 selectorOpenedURL = urlIdent
             }
             .onAppear {
-                if Double.random(in: 0 ..< 1) < 0.1 {
-                    isAdvertisementHidden = false
-                }
-
                 CheckUpdateManager.shared.checkUpdateIfNeeded { latestVersion, _ in
                     DispatchQueue.main.async {
                         withAnimation {
@@ -239,20 +226,13 @@ struct AppListView: View {
         List {
             topSection
 
-            if #available(iOS 15, *) {
-                if appList.activeScope == .all && shouldShowAdvertisement {
-                    advertisementSection
-                }
-            }
-
             appSections
         }
         .animation(.easeOut, value: combines(
             appList.isRebuildNeeded,
             appList.activeScope,
             appList.filter,
-            appList.unsupportedCount,
-            shouldShowAdvertisement
+            appList.unsupportedCount
         ))
         .listStyle(.insetGrouped)
         .navigationTitle(appList.isSelectorMode ?
@@ -290,6 +270,10 @@ struct AppListView: View {
 
     var topSection: some View {
         Section {
+            if !appList.isSelectorMode {
+                batchCreateAutoInjectFoldersButton
+            }
+
             if AppListModel.hasTrollStore && appList.isRebuildNeeded {
                 rebuildButton
                     .transition(.opacity)
@@ -318,6 +302,57 @@ struct AppListView: View {
             }
         }
         .id("TopSection")
+    }
+
+    var batchCreateAutoInjectFoldersButton: some View {
+        Button {
+            guard !isCreatingAllAutoInjectFolders else { return }
+            isCreatingAllAutoInjectFolders = true
+            preparedAutoInjectFolderCount = nil
+
+            AutoReinjectManager.shared.createAllInstalledApplicationDirectories { count in
+                preparedAutoInjectFolderCount = count
+                isCreatingAllAutoInjectFolders = false
+                AutoReinjectManager.shared.schedule(after: 0)
+            }
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(batchCreateAutoInjectFoldersTitle)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+
+                    Text(NSLocalizedString("Create folders for all installed third-party applications at once.", comment: ""))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                if isCreatingAllAutoInjectFolders {
+                    ProgressView()
+                } else {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.title2)
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .disabled(isCreatingAllAutoInjectFolders)
+    }
+
+    private var batchCreateAutoInjectFoldersTitle: String {
+        if isCreatingAllAutoInjectFolders {
+            return NSLocalizedString("Creating application folders...", comment: "")
+        }
+        if let preparedAutoInjectFolderCount {
+            return String(
+                format: NSLocalizedString("Prepared %d application folders", comment: ""),
+                preparedAutoInjectFolderCount
+            )
+        }
+        return NSLocalizedString("Create All Application Folders", comment: "")
     }
 
     var rebuildButton: some View {
@@ -391,37 +426,6 @@ struct AppListView: View {
             }
         }
         .id("AppSection-\(sectionKey)")
-    }
-
-    @available(iOS 15.0, *)
-    var advertisementSection: some View {
-        Section {
-            Button {
-                UIApplication.shared.open(App.advertisementApp.url)
-            } label: {
-                if #available(iOS 16, *) {
-                    AppListCell(app: App.advertisementApp)
-                } else {
-                    AppListCell(app: App.advertisementApp)
-                        .padding(.vertical, 4)
-                }
-            }
-            .foregroundColor(.primary)
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                Button {
-                    isAdvertisementHidden = true
-                } label: {
-                    Label(NSLocalizedString("Hide", comment: ""), systemImage: "eye.slash")
-                }
-                .tint(.red)
-            }
-        } header: {
-            paddedHeaderFooterText(NSLocalizedString("Advertisement", comment: ""))
-                .textCase(.none)
-        } footer: {
-            paddedHeaderFooterText(NSLocalizedString("Buy our paid products to support us if you like TrollFools!", comment: ""))
-        }
-        .id("AdsSection")
     }
 
     @ViewBuilder

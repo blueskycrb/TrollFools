@@ -16,6 +16,9 @@ struct SettingsView: View {
         _preferMainExecutable = AppStorage(wrappedValue: false, "PreferMainExecutable-\(app.bid)")
         _useFrameworkEnumerationFallback = AppStorage(wrappedValue: true, "UseFrameworkEnumerationFallback-\(app.bid)")
         _injectStrategy = AppStorage(wrappedValue: .lexicographic, "InjectStrategy-\(app.bid)")
+        _autoReinjectEnabled = State(
+            initialValue: AutoInjectionStore.shared.isAutoReinjectEnabled(bundleIdentifier: app.bid)
+        )
     }
 
     @AppStorage var useWeakReference: Bool
@@ -23,11 +26,42 @@ struct SettingsView: View {
     @AppStorage var useFrameworkEnumerationFallback: Bool
     @AppStorage var injectStrategy: InjectorV3.Strategy
 
+    @State private var autoReinjectEnabled: Bool
+    @State private var localFolderCreated = false
     @StateObject var viewControllerHost = ViewControllerHost()
 
     var body: some View {
         NavigationView {
             Form {
+                Section {
+                    Toggle(
+                        NSLocalizedString("Automatically Reinject After App Updates", comment: ""),
+                        isOn: $autoReinjectEnabled
+                    )
+                } footer: {
+                    paddedHeaderFooterText(NSLocalizedString("When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened.", comment: ""))
+                }
+
+                Section {
+                    Button {
+                        _ = AutoReinjectManager.shared.localAutoInjectDirectory(
+                            bundleIdentifier: app.bid,
+                            displayName: app.name
+                        )
+                        localFolderCreated = true
+                        AutoReinjectManager.shared.schedule(after: 0)
+                    } label: {
+                        Label(
+                            localFolderCreated
+                                ? NSLocalizedString("Local AutoInject Folder Created", comment: "")
+                                : NSLocalizedString("Create Local AutoInject Folder", comment: ""),
+                            systemImage: localFolderCreated ? "checkmark.circle.fill" : "folder.badge.plus"
+                        )
+                    }
+                } footer: {
+                    paddedHeaderFooterText(NSLocalizedString("Creates only this app's folder using its app name. Copy plug-ins there with Filza; TrollFools will scan it automatically.", comment: ""))
+                }
+
                 Section {
                     Picker(NSLocalizedString("Injection Strategy", comment: ""), selection: $injectStrategy) {
                         ForEach(InjectorV3.Strategy.allCases, id: \.self) { strategy in
@@ -57,6 +91,17 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle(NSLocalizedString("Advanced Settings", comment: ""))
+            .onChange(of: autoReinjectEnabled) { enabled in
+                AutoInjectionStore.shared.setAutoReinjectEnabled(
+                    bundleIdentifier: app.bid,
+                    enabled: enabled
+                )
+                persistInjectionOptions()
+            }
+            .onChange(of: useWeakReference) { _ in persistInjectionOptions() }
+            .onChange(of: preferMainExecutable) { _ in persistInjectionOptions() }
+            .onChange(of: useFrameworkEnumerationFallback) { _ in persistInjectionOptions() }
+            .onChange(of: injectStrategy) { _ in persistInjectionOptions() }
             .navigationBarTitleDisplayMode(.inline)
             .onViewWillAppear {
                 viewControllerHost.viewController = $0
@@ -71,6 +116,16 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private func persistInjectionOptions() {
+        AutoInjectionStore.shared.updateInjectionOptions(
+            bundleIdentifier: app.bid,
+            useWeakReference: useWeakReference,
+            preferMainExecutable: preferMainExecutable,
+            useFrameworkEnumerationFallback: useFrameworkEnumerationFallback,
+            injectStrategy: injectStrategy
+        )
     }
 
     @ViewBuilder

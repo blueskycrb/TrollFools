@@ -61,3 +61,11 @@ jobs:
           make package
           cp packages/*.tipa .
           find .theos/obj -name "*.dSYM" -exec cp -r {} . \;
+
+      - name: Upload Packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrollFools-${{ env.VERSION }}
+          path: |
+            *.tipa
+            *.dSYM

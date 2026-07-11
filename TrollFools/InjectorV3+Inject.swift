@@ -27,21 +27,26 @@ extension InjectorV3 {
 
     // MARK: - Instance Methods
 
-    func inject(_ assetURLs: [URL], shouldPersist: Bool) throws {
-        didUseMachOEnumerationFallback = false
-        let preparedAssetURLs = try preprocessAssets(assetURLs)
+    @discardableResult
+    func inject(_ assetURLs: [URL], shouldPersist: Bool) throws -> [URL] {
+        try withOperationLock {
+            didUseMachOEnumerationFallback = false
+            let preparedAssetURLs = try preprocessAssets(assetURLs)
 
-        precondition(!preparedAssetURLs.isEmpty, "No asset to inject.")
-        terminateApp()
+            precondition(!preparedAssetURLs.isEmpty, "No asset to inject.")
+            terminateApp()
 
-        try injectBundles(preparedAssetURLs
-            .filter { $0.pathExtension.lowercased() == "bundle" })
+            try injectBundles(preparedAssetURLs
+                .filter { $0.pathExtension.lowercased() == "bundle" })
 
-        try injectDylibsAndFrameworks(preparedAssetURLs
-            .filter { $0.pathExtension.lowercased() == "dylib" || $0.pathExtension.lowercased() == "framework" })
+            try injectDylibsAndFrameworks(preparedAssetURLs
+                .filter { $0.pathExtension.lowercased() == "dylib" || $0.pathExtension.lowercased() == "framework" })
 
-        if shouldPersist {
-            try persist(preparedAssetURLs)
+            if shouldPersist {
+                try persist(preparedAssetURLs)
+            }
+
+            return preparedAssetURLs
         }
     }
 
