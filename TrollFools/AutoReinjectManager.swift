@@ -332,7 +332,14 @@ final class AutoReinjectManager {
                 }
 
                 let folderName = folderURL.lastPathComponent
-                guard LSApplicationProxy(forIdentifier: folderName) != nil,
+                let targetMarkerURL = folderURL.appendingPathComponent(inboxBundleIdentifierFileName)
+
+                // A newly-created target folder can legitimately use the Bundle ID
+                // when LaunchServices has no localized app name. It already contains
+                // our marker but no plug-in yet. Do not mistake it for an obsolete
+                // empty legacy folder and delete it immediately after the button tap.
+                guard !fileManager.fileExists(atPath: targetMarkerURL.path),
+                      LSApplicationProxy(forIdentifier: folderName) != nil,
                       (try? supportedSourceURLs(in: folderURL).isEmpty) == true
                 else {
                     continue
