@@ -28,20 +28,22 @@ extension InjectorV3 {
     }
 
     func eject(_ assetURLs: [URL], shouldDesist: Bool) throws {
-        precondition(!assetURLs.isEmpty, "No asset to eject.")
-        terminateApp()
+        try withOperationLock {
+            precondition(!assetURLs.isEmpty, "No asset to eject.")
+            terminateApp()
 
-        if shouldDesist {
-            try desistThrowing(assetURLs)
-        } else {
-            persistIfNecessary(assetURLs)
+            if shouldDesist {
+                try desistThrowing(assetURLs)
+            } else {
+                persistIfNecessary(assetURLs)
+            }
+
+            try ejectBundles(assetURLs
+                .filter { $0.pathExtension.lowercased() == "bundle" })
+
+            try ejectDylibsAndFrameworks(assetURLs
+                .filter { $0.pathExtension.lowercased() == "dylib" || $0.pathExtension.lowercased() == "framework" })
         }
-
-        try ejectBundles(assetURLs
-            .filter { $0.pathExtension.lowercased() == "bundle" })
-
-        try ejectDylibsAndFrameworks(assetURLs
-            .filter { $0.pathExtension.lowercased() == "dylib" || $0.pathExtension.lowercased() == "framework" })
     }
 
     // MARK: - Private Methods

@@ -11,25 +11,19 @@ import Foundation
 final class AutoReinjectManager {
     static let shared = AutoReinjectManager()
 
-    // Use one stable Documents directory. Older builds wrote to several candidate
-    // paths, which could make Files.app display one folder while TrollFools scanned
-    // another one. The LaunchServices data container is authoritative for a
-    // TrollStore-installed application; FileManager is the safe fallback.
+    // Use the one Documents directory exported by this running app. Older builds
+    // wrote to several candidate paths, which could make Files.app display one
+    // folder while TrollFools scanned another one.
     static let localAutoInjectRootURL: URL = {
-        let documentsURL: URL
-        if let proxy = LSApplicationProxy(forIdentifier: Constants.gAppIdentifier),
-           let dataContainerURL = proxy.dataContainerURL()
-        {
-            documentsURL = dataContainerURL.appendingPathComponent("Documents", isDirectory: true)
-        } else if let resolvedURL = FileManager.default.urls(
+        // This is the Documents directory exported by UIFileSharingEnabled and is
+        // therefore the same location shown by Files.app. Do not use the
+        // LaunchServices proxy here: on some TrollStore installations it may point
+        // at a stale or alternate data container that Files.app does not expose.
+        let documentsURL = FileManager.default.urls(
             for: .documentDirectory,
             in: .userDomainMask
-        ).first {
-            documentsURL = resolvedURL
-        } else {
-            documentsURL = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
-                .appendingPathComponent("Documents", isDirectory: true)
-        }
+        ).first ?? URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+            .appendingPathComponent("Documents", isDirectory: true)
         return documentsURL
             .appendingPathComponent("AutoInject", isDirectory: true)
             .standardizedFileURL
