@@ -266,7 +266,15 @@ public extension AuxiliaryExecute {
         var pid: pid_t = 0
         let spawnStatus = posix_spawn(&pid, command, &fileActions, &attrs, argv + [nil], realEnv + [nil])
         if spawnStatus != 0 {
-            let receipt = ExecuteReceipt.failure(error: .posixSpawnFailed)
+            let message = String(cString: strerror(spawnStatus))
+            DDLogError(
+                "Unable to spawn command \(command): POSIX \(spawnStatus) (\(message))",
+                ddlog: ddlog
+            )
+            let receipt = ExecuteReceipt.failure(
+                error: .posixSpawnFailed,
+                stderr: "posix_spawn failed: \(spawnStatus) (\(message)); command=\(command)"
+            )
             completionBlock?(receipt)
             return
         }

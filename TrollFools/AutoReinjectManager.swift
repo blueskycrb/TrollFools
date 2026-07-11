@@ -11,20 +11,17 @@ import Foundation
 final class AutoReinjectManager {
     static let shared = AutoReinjectManager()
 
-    // Use the one Documents directory exported by this running app. Older builds
-    // wrote to several candidate paths, which could make Files.app display one
-    // folder while TrollFools scanned another one.
+    // Keep the inbox in iCloud Drive instead of TrollFools' app container.
+    // TrollFools must run without a sandbox/container so CoreTrust helper tools can
+    // execute correctly under TrollStore. iCloud Drive is still directly visible in
+    // Files.app and survives reinstalling/updating TrollFools.
     static let localAutoInjectRootURL: URL = {
-        // This is the Documents directory exported by UIFileSharingEnabled and is
-        // therefore the same location shown by Files.app. Do not use the
-        // LaunchServices proxy here: on some TrollStore installations it may point
-        // at a stale or alternate data container that Files.app does not expose.
-        let documentsURL = FileManager.default.urls(
-            for: .documentDirectory,
-            in: .userDomainMask
-        ).first ?? URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
-            .appendingPathComponent("Documents", isDirectory: true)
-        return documentsURL
+        let cloudDocsURL = URL(
+            fileURLWithPath: "/var/mobile/Library/Mobile Documents/com~apple~CloudDocs",
+            isDirectory: true
+        )
+        return cloudDocsURL
+            .appendingPathComponent("TrollFools", isDirectory: true)
             .appendingPathComponent("AutoInject", isDirectory: true)
             .standardizedFileURL
     }()
