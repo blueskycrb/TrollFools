@@ -312,3 +312,7 @@
 
 "Automatically Reinject After App Updates" = "Automatically Reinject After App Updates";
 "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened." = "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened.";
+
+"Create Local AutoInject Folder" = "Create Local AutoInject Folder";
+"Local AutoInject Folder Created" = "Local AutoInject Folder Created";
+"Creates only this app's folder using its app name. Copy plug-ins there with Filza; TrollFools will scan it automatically." = "Creates only this app's folder using its app name. Copy plug-ins there with Filza; TrollFools will scan it automatically.";

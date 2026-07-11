@@ -27,6 +27,7 @@ struct SettingsView: View {
     @AppStorage var injectStrategy: InjectorV3.Strategy
 
     @State private var autoReinjectEnabled: Bool
+    @State private var localFolderCreated = false
     @StateObject var viewControllerHost = ViewControllerHost()
 
     var body: some View {
@@ -39,6 +40,26 @@ struct SettingsView: View {
                     )
                 } footer: {
                     paddedHeaderFooterText(NSLocalizedString("When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened.", comment: ""))
+                }
+
+                Section {
+                    Button {
+                        _ = AutoReinjectManager.shared.localAutoInjectDirectory(
+                            bundleIdentifier: app.bid,
+                            displayName: app.name
+                        )
+                        localFolderCreated = true
+                        AutoReinjectManager.shared.schedule(after: 0)
+                    } label: {
+                        Label(
+                            localFolderCreated
+                                ? NSLocalizedString("Local AutoInject Folder Created", comment: "")
+                                : NSLocalizedString("Create Local AutoInject Folder", comment: ""),
+                            systemImage: localFolderCreated ? "checkmark.circle.fill" : "folder.badge.plus"
+                        )
+                    }
+                } footer: {
+                    paddedHeaderFooterText(NSLocalizedString("Creates only this app's folder using its app name. Copy plug-ins there with Filza; TrollFools will scan it automatically.", comment: ""))
                 }
 
                 Section {

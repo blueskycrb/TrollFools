@@ -119,10 +119,6 @@ final class AppListModel: ObservableObject {
         let allApplications = Self.fetchApplications(&unsupportedCount)
         allApplications.forEach { app in
             app.appList = self
-            _ = AutoReinjectManager.shared.localAutoInjectDirectory(
-                bundleIdentifier: app.bid,
-                displayName: app.name
-            )
             guard app.isInjected || app.hasPersistedAssets else { return }
             AutoInjectionStore.shared.bootstrapProfile(
                 bundleIdentifier: app.bid,

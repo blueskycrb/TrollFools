@@ -312,3 +312,7 @@
 
 "Automatically Reinject After App Updates" = "App 更新后自动重新注入";
 "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened." = "App 更新替换原安装包后，TrollFools 只会恢复更新前处于启用状态的插件。如果更新时 TrollFools 未运行，将在下次打开时恢复。";
+
+"Create Local AutoInject Folder" = "创建本地自动注入文件夹";
+"Local AutoInject Folder Created" = "本地自动注入文件夹已创建";
+"Creates only this app's folder using its app name. Copy plug-ins there with Filza; TrollFools will scan it automatically." = "只为当前 App 创建以应用名称命名的文件夹。使用 Filza 将插件复制进去，TrollFools 会自动扫描。";

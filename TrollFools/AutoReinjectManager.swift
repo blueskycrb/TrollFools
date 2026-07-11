@@ -69,6 +69,7 @@ final class AutoReinjectManager {
     private let inboxStateFileName = ".trollfools-state.json"
     private let inboxResultFileName = "_LastResult.txt"
     private let inboxTargetFileName = "_TargetApp.txt"
+    private let inboxBundleIdentifierFileName = "_BundleIdentifier.txt"
     private let lastScanFileName = "_LastScan.txt"
     private let installedAppsFileName = "_InstalledApps.txt"
 
@@ -104,31 +105,88 @@ final class AutoReinjectManager {
     ) -> URL {
         let rootURLs = Self.localAutoInjectRootURLs
         let fileManager = FileManager.default
-        let targetDescription: String? = {
-            guard let displayName, !displayName.isEmpty else { return nil }
-            return """
-            Target app: \(displayName)
-            Bundle ID: \(bundleIdentifier)
+        let resolvedDisplayName = displayName
+            ?? LSApplicationProxy(forIdentifier: bundleIdentifier)?.localizedName()
+            ?? bundleIdentifier
+        let folderName = friendlyFolderName(
+            displayName: resolvedDisplayName,
+            bundleIdentifier: bundleIdentifier
+        )
+        let targetDescription = """
+        Target app: \(resolvedDisplayName)
+        Bundle ID: \(bundleIdentifier)
 
-            Put .dylib, .deb, .zip, .framework, or .bundle files here.
-            Subfolders are supported. Open TrollFools and keep it in the foreground
-            for about 8 seconds; injection will start automatically.
-            """
-        }()
+        Put .dylib, .deb, .zip, .framework, or .bundle files here.
+        Subfolders are supported. Open TrollFools and keep it in the foreground
+        for about 8 seconds; injection will start automatically.
+        """
 
         for rootURL in rootURLs {
-            let url = rootURL.appendingPathComponent(bundleIdentifier, isDirectory: true)
-            try? fileManager.createDirectory(at: url, withIntermediateDirectories: true)
-            if let targetDescription {
-                try? targetDescription.write(
-                    to: url.appendingPathComponent(inboxTargetFileName),
-                    atomically: true,
-                    encoding: .utf8
-                )
+            let legacyURL = rootURL.appendingPathComponent(bundleIdentifier, isDirectory: true)
+            let url = rootURL.appendingPathComponent(folderName, isDirectory: true)
+
+            // Earlier builds used a raw Bundle ID as the folder name. Rename it when
+            // possible so existing plug-ins remain available under the friendly name.
+            if legacyURL.standardizedFileURL.path != url.standardizedFileURL.path,
+               fileManager.fileExists(atPath: legacyURL.path),
+               !fileManager.fileExists(atPath: url.path)
+            {
+                try? fileManager.moveItem(at: legacyURL, to: url)
             }
+
+            try? fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+            try? targetDescription.write(
+                to: url.appendingPathComponent(inboxTargetFileName),
+                atomically: true,
+                encoding: .utf8
+            )
+            try? bundleIdentifier.write(
+                to: url.appendingPathComponent(inboxBundleIdentifierFileName),
+                atomically: true,
+                encoding: .utf8
+            )
         }
 
-        return rootURLs[0].appendingPathComponent(bundleIdentifier, isDirectory: true)
+        return rootURLs[0].appendingPathComponent(folderName, isDirectory: true)
+    }
+
+    private func friendlyFolderName(displayName: String, bundleIdentifier: String) -> String {
+        let invalidCharacters = CharacterSet(charactersIn: "/:")
+        let sanitizedName = displayName
+            .components(separatedBy: invalidCharacters)
+            .joined(separator: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = sanitizedName.isEmpty ? bundleIdentifier : sanitizedName
+
+        let hasNameCollision = LSApplicationWorkspace.default().allApplications().contains { proxy in
+            guard let otherBundleIdentifier = proxy.applicationIdentifier(),
+                  otherBundleIdentifier != bundleIdentifier,
+                  let otherName = proxy.localizedName()
+            else {
+                return false
+            }
+            return otherName.localizedCaseInsensitiveCompare(displayName) == .orderedSame
+        }
+        return hasNameCollision ? "\(name) [\(bundleIdentifier)]" : name
+    }
+
+    private func targetBundleIdentifier(for folderURL: URL) -> String {
+        let markerURL = folderURL.appendingPathComponent(inboxBundleIdentifierFileName)
+        if let value = try? String(contentsOf: markerURL, encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !value.isEmpty
+        {
+            return value
+        }
+
+        let folderName = folderURL.lastPathComponent
+        if let openingBracket = folderName.lastIndex(of: "["), folderName.hasSuffix("]") {
+            let candidate = String(folderName[folderName.index(after: openingBracket)..<folderName.index(before: folderName.endIndex)])
+            if candidate.contains(".") {
+                return candidate
+            }
+        }
+        return folderName
     }
 
     private func reconcileAll(attempt: Int) {
@@ -176,8 +234,8 @@ final class AutoReinjectManager {
                 let instructions = """
                 TrollFools Local Auto-Inject Folder
 
-                1. TrollFools automatically creates a folder for every supported installed app.
-                   The folder name is the target app Bundle ID, for example com.example.app.
+                1. Open an app's advanced settings in TrollFools and create its local folder.
+                   Folders use the app name, for example WeChat, instead of a raw Bundle ID.
                 2. Put .dylib, .deb, .zip, .framework, or .bundle files into that folder.
                    Subfolders are supported.
                 3. Open or return to TrollFools and keep it in front for about 8 seconds.
@@ -208,9 +266,39 @@ final class AutoReinjectManager {
         }
 
         prepareInstalledApplicationDirectories()
+        removeEmptyLegacyBundleIdentifierDirectories()
 
         for profile in AutoInjectionStore.shared.allProfiles() {
             _ = localAutoInjectDirectory(bundleIdentifier: profile.bundleIdentifier)
+        }
+    }
+
+    private func removeEmptyLegacyBundleIdentifierDirectories() {
+        let fileManager = FileManager.default
+
+        for rootURL in Self.localAutoInjectRootURLs {
+            guard let folders = try? fileManager.contentsOfDirectory(
+                at: rootURL,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            ) else {
+                continue
+            }
+
+            for folderURL in folders {
+                guard (try? folderURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else {
+                    continue
+                }
+
+                let folderName = folderURL.lastPathComponent
+                guard LSApplicationProxy(forIdentifier: folderName) != nil,
+                      (try? supportedSourceURLs(in: folderURL).isEmpty) == true
+                else {
+                    continue
+                }
+
+                try? fileManager.removeItem(at: folderURL)
+            }
         }
     }
 
@@ -229,10 +317,6 @@ final class AutoReinjectManager {
             }
 
             let displayName = proxy.localizedName() ?? bundleIdentifier
-            _ = localAutoInjectDirectory(
-                bundleIdentifier: bundleIdentifier,
-                displayName: displayName
-            )
             catalogEntries.append((displayName, bundleIdentifier))
         }
 
@@ -244,7 +328,7 @@ final class AutoReinjectManager {
             .joined(separator: "\n\n")
         let contents = """
         TrollFools detected these installed third-party applications.
-        A Bundle ID folder is created automatically for every entry.
+        Open an app's advanced settings to create a friendly local auto-inject folder.
 
         \(catalog)
         """
@@ -292,7 +376,7 @@ final class AutoReinjectManager {
             }
 
             summary.targetFolderCount += 1
-            let bundleIdentifier = folderURL.lastPathComponent
+            let bundleIdentifier = targetBundleIdentifier(for: folderURL)
             guard !bundleIdentifier.isEmpty else { continue }
 
             do {
