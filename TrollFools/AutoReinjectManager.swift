@@ -83,6 +83,39 @@ final class AutoReinjectManager {
         }
     }
 
+    func createAllInstalledApplicationDirectories(completion: @escaping (Int) -> Void) {
+        queue.async { [weak self] in
+            guard let self else { return }
+
+            let ignoredPrefixes = ["com.apple.", "wiki.qaq.", "com.82flex.", "ch.xxtou."]
+            var processedBundleIdentifiers = Set<String>()
+
+            for proxy in LSApplicationWorkspace.default().allApplications() {
+                autoreleasepool {
+                    guard let bundleIdentifier = proxy.applicationIdentifier(),
+                          !bundleIdentifier.isEmpty,
+                          !ignoredPrefixes.contains(where: { bundleIdentifier.hasPrefix($0) }),
+                          !processedBundleIdentifiers.contains(bundleIdentifier),
+                          let bundleURL = proxy.bundleURL(),
+                          bundleURL.pathExtension.lowercased() == "app"
+                    else {
+                        return
+                    }
+
+                    processedBundleIdentifiers.insert(bundleIdentifier)
+                    _ = self.localAutoInjectDirectory(
+                        bundleIdentifier: bundleIdentifier,
+                        displayName: proxy.localizedName()
+                    )
+                }
+            }
+
+            DispatchQueue.main.async {
+                completion(processedBundleIdentifiers.count)
+            }
+        }
+    }
+
     @discardableResult
     func localAutoInjectDirectory(
         bundleIdentifier: String,

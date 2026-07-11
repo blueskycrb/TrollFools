@@ -316,3 +316,8 @@
 "Create Local AutoInject Folder" = "创建本地自动注入文件夹";
 "Local AutoInject Folder Created" = "本地自动注入文件夹已创建";
 "Creates only this app's folder using its app name. Copy plug-ins there with Filza; TrollFools will scan it automatically." = "只为当前 App 创建以应用名称命名的文件夹。使用 Filza 将插件复制进去，TrollFools 会自动扫描。";
+
+"Create All Application Folders" = "批量创建所有应用文件夹";
+"Creating application folders..." = "正在批量创建应用文件夹...";
+"Prepared %d application folders" = "已准备 %d 个应用文件夹";
+"Create folders for all installed third-party applications at once." = "一次性为所有已安装的第三方应用创建自动注入文件夹。";
