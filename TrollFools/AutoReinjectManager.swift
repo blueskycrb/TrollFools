@@ -12,7 +12,22 @@ final class AutoReinjectManager {
     static let shared = AutoReinjectManager()
 
     static let localAutoInjectRootURL: URL = {
-        let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        // TrollFools is signed as a no-container/platform application. In that mode,
+        // FileManager's user-domain Documents directory may resolve to /var/mobile/Documents
+        // instead of the app data container exposed by Files.app. Always ask LaunchServices
+        // for TrollFools' real data container first so both sides use the same folder.
+        if let proxy = LSApplicationProxy(forIdentifier: Constants.gAppIdentifier),
+           let dataContainerURL = proxy.dataContainerURL()
+        {
+            return dataContainerURL
+                .appendingPathComponent("Documents", isDirectory: true)
+                .appendingPathComponent("AutoInject", isDirectory: true)
+        }
+
+        let documentsURL = FileManager.default.urls(
+            for: .documentDirectory,
+            in: .userDomainMask
+        ).first!
         return documentsURL.appendingPathComponent("AutoInject", isDirectory: true)
     }()
 
