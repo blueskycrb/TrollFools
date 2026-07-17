@@ -321,3 +321,12 @@
 "Creating application folders..." = "正在批量创建应用文件夹...";
 "Prepared %d application folders" = "已准备 %d 个应用文件夹";
 "Create folders for all installed third-party applications at once." = "一次性为所有已安装的第三方应用创建自动注入文件夹。";
+
+"Download and Inject" = "下载并注入";
+"Plugin URL" = "插件链接";
+"Download" = "下载";
+"Paste a direct link to a .dylib, .deb, .zip, .framework, or .bundle file." = "粘贴 .dylib、.deb、.zip、.framework 或 .bundle 文件的直链。";
+"Please enter a valid HTTP or HTTPS URL." = "请输入有效的 HTTP 或 HTTPS 链接。";
+"The download returned no file." = "下载未返回文件。";
+"Download failed with HTTP status %d." = "下载失败，HTTP 状态码为 %d。";
+"The downloaded file is not a supported plug-in format." = "下载的文件不是支持的插件格式。";

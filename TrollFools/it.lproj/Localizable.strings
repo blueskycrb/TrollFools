@@ -312,3 +312,12 @@
 
 "Automatically Reinject After App Updates" = "Reinietta automaticamente dopo gli aggiornamenti";
 "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened." = "Quando un aggiornamento sostituisce l'app, TrollFools ripristina solo i plug-in che erano abilitati. Se TrollFools non era in esecuzione, il ripristino avviene alla successiva apertura.";
+
+"Download and Inject" = "Download and Inject";
+"Plugin URL" = "Plugin URL";
+"Download" = "Download";
+"Paste a direct link to a .dylib, .deb, .zip, .framework, or .bundle file." = "Paste a direct link to a .dylib, .deb, .zip, .framework, or .bundle file.";
+"Please enter a valid HTTP or HTTPS URL." = "Please enter a valid HTTP or HTTPS URL.";
+"The download returned no file." = "The download returned no file.";
+"Download failed with HTTP status %d." = "Download failed with HTTP status %d.";
+"The downloaded file is not a supported plug-in format." = "The downloaded file is not a supported plug-in format.";

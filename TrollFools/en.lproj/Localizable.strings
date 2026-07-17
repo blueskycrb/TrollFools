@@ -321,3 +321,12 @@
 "Creating application folders..." = "Creating application folders...";
 "Prepared %d application folders" = "Prepared %d application folders";
 "Create folders for all installed third-party applications at once." = "Create folders for all installed third-party applications at once.";
+
+"Download and Inject" = "Download and Inject";
+"Plugin URL" = "Plugin URL";
+"Download" = "Download";
+"Paste a direct link to a .dylib, .deb, .zip, .framework, or .bundle file." = "Paste a direct link to a .dylib, .deb, .zip, .framework, or .bundle file.";
+"Please enter a valid HTTP or HTTPS URL." = "Please enter a valid HTTP or HTTPS URL.";
+"The download returned no file." = "The download returned no file.";
+"Download failed with HTTP status %d." = "Download failed with HTTP status %d.";
+"The downloaded file is not a supported plug-in format." = "The downloaded file is not a supported plug-in format.";
