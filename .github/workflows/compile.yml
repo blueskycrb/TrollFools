@@ -60,6 +60,7 @@ jobs:
         run: |
           make package
           cp packages/*.tipa .
+          for package in *.tipa; do cp "$package" "${package%.tipa}.ipa"; done
           find .theos/obj -name "*.dSYM" -exec cp -r {} . \;
 
       - name: Upload Packages
@@ -68,4 +69,5 @@ jobs:
           name: TrollFools-${{ env.VERSION }}
           path: |
             *.tipa
+            *.ipa
             *.dSYM
