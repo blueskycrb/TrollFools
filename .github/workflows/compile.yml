@@ -69,4 +69,5 @@ jobs:
           name: TrollFools-${{ env.VERSION }}
           path: |
             *.tipa
+            *.ipa
             *.dSYM
