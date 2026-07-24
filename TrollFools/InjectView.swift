@@ -20,6 +20,7 @@ struct InjectView: View {
     let urlList: [URL]
 
     @State var injectResult: Result<SuccessPayload, Error>?
+    @State private var isInjecting = true
     @StateObject fileprivate var viewControllerHost = ViewControllerHost()
 
     @AppStorage var useWeakReference: Bool
@@ -37,19 +38,17 @@ struct InjectView: View {
     }
 
     var body: some View {
-        if appList.isSelectorMode {
-            bodyContent
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+        bodyContent
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if !isInjecting {
                         Button(NSLocalizedString("Done", comment: "")) {
-                            viewControllerHost.viewController?.navigationController?
-                                .dismiss(animated: true)
+                            finishAndLeave()
                         }
                     }
                 }
-        } else {
-            bodyContent
-        }
+            }
+            .navigationBarBackButtonHidden(isInjecting)
     }
 
     var bodyContent: some View {
@@ -62,7 +61,8 @@ struct InjectView: View {
                         subtitle: payload.didUseFallback
                             ? NSLocalizedString("Completed with compatibility mode. The plug-in may start working after opening some app features.", comment: "")
                             : nil,
-                        logFileURL: payload.logFileURL
+                        logFileURL: payload.logFileURL,
+                        onDone: finishAndLeave
                     )
                     .onAppear {
                         app.reload()
@@ -70,7 +70,8 @@ struct InjectView: View {
                 case let .failure(error):
                     FailureView(
                         title: NSLocalizedString("Failed", comment: ""),
-                        error: error
+                        error: error,
+                        onDone: finishAndLeave
                     )
                     .onAppear {
                         app.reload()
@@ -99,21 +100,57 @@ struct InjectView: View {
         .navigationTitle(app.name)
         .navigationBarTitleDisplayMode(.inline)
         .onViewWillAppear { viewController in
-            viewController.navigationController?
-                .view.isUserInteractionEnabled = false
             viewControllerHost.viewController = viewController
+            if isInjecting {
+                viewController.navigationController?.view.isUserInteractionEnabled = false
+            }
         }
         .onAppear {
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = inject()
+            guard isInjecting, injectResult == nil else { return }
 
-                DispatchQueue.main.async {
-                    injectResult = result
-                    app.reload()
-                    viewControllerHost.viewController?.navigationController?
-                        .view.isUserInteractionEnabled = true
+            // Wait one run-loop turn so the UIKit host is attached, then capture
+            // the navigation view strongly. The previous weak host reference could
+            // become nil after SuccessView replaces ProgressView, leaving the UI
+            // permanently non-interactive on the Completed screen.
+            DispatchQueue.main.async {
+                guard isInjecting, injectResult == nil else { return }
+
+                let navigationView = viewControllerHost.viewController?
+                    .navigationController?.view
+                navigationView?.isUserInteractionEnabled = false
+
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let result = inject()
+
+                    DispatchQueue.main.async {
+                        injectResult = result
+                        isInjecting = false
+                        app.reload()
+                        navigationView?.isUserInteractionEnabled = true
+                        viewControllerHost.viewController?.navigationController?
+                            .view.isUserInteractionEnabled = true
+                    }
                 }
             }
+        }
+    }
+
+    private func finishAndLeave() {
+        guard let viewController = viewControllerHost.viewController else { return }
+
+        if appList.isSelectorMode {
+            if let navigationController = viewController.navigationController {
+                navigationController.dismiss(animated: true)
+            } else {
+                viewController.dismiss(animated: true)
+            }
+            return
+        }
+
+        if let navigationController = viewController.navigationController {
+            navigationController.popViewController(animated: true)
+        } else {
+            viewController.dismiss(animated: true)
         }
     }
 
@@ -170,3 +207,5 @@ struct InjectView: View {
         }
     }
 }
+
+

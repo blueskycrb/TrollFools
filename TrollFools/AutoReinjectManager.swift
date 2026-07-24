@@ -116,6 +116,82 @@ final class AutoReinjectManager {
         }
     }
 
+    /// Deletes auto-inject folders that were created but never used.
+    /// A folder is considered unused when it has no supported plug-in files
+    /// and no recorded injection fingerprint state.
+    func deleteUnusedAutoInjectFolders(completion: @escaping (Int) -> Void) {
+        queue.async { [weak self] in
+            guard let self else { return }
+
+            let fileManager = FileManager.default
+            var deletedCount = 0
+            let protectedRootFileNames: Set<String> = [
+                "README.txt",
+                self.installedAppsFileName,
+                self.lastScanFileName,
+                "_PathDiagnostics.txt",
+            ]
+
+            for rootURL in Self.localAutoInjectRootURLs {
+                guard let folders = try? fileManager.contentsOfDirectory(
+                    at: rootURL,
+                    includingPropertiesForKeys: [.isDirectoryKey],
+                    options: [.skipsHiddenFiles]
+                ) else {
+                    continue
+                }
+
+                for folderURL in folders {
+                    let folderName = folderURL.lastPathComponent
+                    if protectedRootFileNames.contains(folderName) {
+                        continue
+                    }
+
+                    guard (try? folderURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else {
+                        continue
+                    }
+
+                    // Keep folders that already contain plug-ins.
+                    let hasPlugins = (try? self.supportedSourceURLs(in: folderURL).isEmpty) == false
+                    if hasPlugins {
+                        continue
+                    }
+
+                    // Keep folders that previously injected something.
+                    let stateURL = folderURL.appendingPathComponent(self.inboxStateFileName)
+                    if let data = try? Data(contentsOf: stateURL),
+                       let state = try? JSONDecoder().decode(LocalInboxState.self, from: data),
+                       !state.fingerprints.isEmpty
+                    {
+                        continue
+                    }
+
+                    // Only empty/never-used folders are removed.
+                    do {
+                        try fileManager.removeItem(at: folderURL)
+                        deletedCount += 1
+                        DDLogInfo(
+                            "Deleted unused auto-inject folder: \(folderURL.lastPathComponent)",
+                            ddlog: InjectorV3.main.logger
+                        )
+                    } catch {
+                        DDLogError(
+                            "Failed to delete unused auto-inject folder \(folderURL.path): \(error)",
+                            ddlog: InjectorV3.main.logger
+                        )
+                    }
+                }
+            }
+
+            // Refresh catalog/readme after cleanup.
+            self.prepareLocalAutoInjectDirectory()
+
+            DispatchQueue.main.async {
+                completion(deletedCount)
+            }
+        }
+    }
+
     @discardableResult
     func localAutoInjectDirectory(
         bundleIdentifier: String,

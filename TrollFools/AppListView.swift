@@ -28,6 +28,9 @@ struct AppListView: View {
     @State var latestVersionString: String?
     @State var isCreatingAllAutoInjectFolders = false
     @State var preparedAutoInjectFolderCount: Int?
+    @State var isDeletingUnusedAutoInjectFolders = false
+    @State var deletedUnusedAutoInjectFolderCount: Int?
+    @State var isDeleteUnusedFoldersConfirmPresented = false
 
     @AppStorage("isWarningHidden")
     var isWarningHidden: Bool = false
@@ -42,7 +45,7 @@ struct AppListView: View {
 
         let appStringFormat = """
         %@ %@
-        %@ © 2024-%d %@
+        %@ 漏 2024-%d %@
         """
 
         return String(
@@ -71,7 +74,7 @@ struct AppListView: View {
                         selectorOpenedURL = result
                         isWarningHidden = true
                     } label: {
-                        Text(NSLocalizedString("Continue and Don’t Show Again", comment: ""))
+                        Text(NSLocalizedString("Continue and Don鈥檛 Show Again", comment: ""))
                     }
                     Button(role: .cancel) {
                         temporaryOpenedURL = nil
@@ -272,6 +275,7 @@ struct AppListView: View {
         Section {
             if !appList.isSelectorMode {
                 batchCreateAutoInjectFoldersButton
+                batchDeleteUnusedAutoInjectFoldersButton
             }
 
             if AppListModel.hasTrollStore && appList.isRebuildNeeded {
@@ -339,7 +343,7 @@ struct AppListView: View {
             }
             .padding(.vertical, 4)
         }
-        .disabled(isCreatingAllAutoInjectFolders)
+        .disabled(isCreatingAllAutoInjectFolders || isDeletingUnusedAutoInjectFolders)
     }
 
     private var batchCreateAutoInjectFoldersTitle: String {
@@ -353,6 +357,67 @@ struct AppListView: View {
             )
         }
         return NSLocalizedString("Create All Application Folders", comment: "")
+    }
+
+
+    var batchDeleteUnusedAutoInjectFoldersButton: some View {
+        Button {
+            guard !isDeletingUnusedAutoInjectFolders else { return }
+            isDeleteUnusedFoldersConfirmPresented = true
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(batchDeleteUnusedAutoInjectFoldersTitle)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+
+                    Text(NSLocalizedString("Delete folders that were created but never used for injection.", comment: ""))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                if isDeletingUnusedAutoInjectFolders {
+                    ProgressView()
+                } else {
+                    Image(systemName: "folder.badge.minus")
+                        .font(.title2)
+                        .foregroundColor(.red)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .disabled(isDeletingUnusedAutoInjectFolders || isCreatingAllAutoInjectFolders)
+        .alert(isPresented: $isDeleteUnusedFoldersConfirmPresented) {
+            Alert(
+                title: Text(NSLocalizedString("Delete Unused Folders", comment: "")),
+                message: Text(NSLocalizedString("This removes only empty auto-inject folders that have never been used. Folders that already contain plug-ins will be kept.", comment: "")),
+                primaryButton: .destructive(Text(NSLocalizedString("Delete", comment: ""))) {
+                    guard !isDeletingUnusedAutoInjectFolders else { return }
+                    isDeletingUnusedAutoInjectFolders = true
+                    deletedUnusedAutoInjectFolderCount = nil
+                    AutoReinjectManager.shared.deleteUnusedAutoInjectFolders { count in
+                        deletedUnusedAutoInjectFolderCount = count
+                        isDeletingUnusedAutoInjectFolders = false
+                    }
+                },
+                secondaryButton: .cancel()
+            )
+        }
+    }
+
+    private var batchDeleteUnusedAutoInjectFoldersTitle: String {
+        if isDeletingUnusedAutoInjectFolders {
+            return NSLocalizedString("Deleting unused folders...", comment: "")
+        }
+        if let deletedUnusedAutoInjectFolderCount {
+            return String(
+                format: NSLocalizedString("Deleted %d unused folders", comment: ""),
+                deletedUnusedAutoInjectFolderCount
+            )
+        }
+        return NSLocalizedString("Delete Unused Application Folders", comment: "")
     }
 
     var rebuildButton: some View {
@@ -418,7 +483,7 @@ struct AppListView: View {
                 paddedHeaderFooterText(NSLocalizedString("No Applications", comment: ""))
                     .textCase(.none)
             } else {
-                paddedHeaderFooterText(sectionKey == selectedIndex ? "→ \(sectionKey)" : sectionKey)
+                paddedHeaderFooterText(sectionKey == selectedIndex ? "鈫?\(sectionKey)" : sectionKey)
             }
         } footer: {
             if (sectionKey == "_" || sectionKey == appList.activeScopeApps.keys.last) && !appList.isSelectorMode && !appList.filter.isSearching {
@@ -495,8 +560,8 @@ struct AppListView: View {
 
     private func reloadSearchBarPlaceholder(_ searchBar: UISearchBar, showPatchedOnly: Bool) {
         searchBar.placeholder = (showPatchedOnly
-            ? NSLocalizedString("Search Patched…", comment: "")
-            : NSLocalizedString("Search…", comment: ""))
+            ? NSLocalizedString("Search Patched鈥?, comment: "")
+            : NSLocalizedString("Search鈥?, comment: ""))
     }
 
     @ViewBuilder
@@ -516,3 +581,4 @@ struct URLIdentifiable: Identifiable {
     let url: URL
     var id: String { url.absoluteString }
 }
+

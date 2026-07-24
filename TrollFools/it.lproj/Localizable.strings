@@ -312,3 +312,11 @@
 
 "Automatically Reinject After App Updates" = "Reinietta automaticamente dopo gli aggiornamenti";
 "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened." = "Quando un aggiornamento sostituisce l'app, TrollFools ripristina solo i plug-in che erano abilitati. Se TrollFools non era in esecuzione, il ripristino avviene alla successiva apertura.";
+
+"Delete Unused Application Folders" = "Elimina cartelle non usate";
+"Deleting unused folders..." = "Eliminazione cartelle non usate...";
+"Deleted %d unused folders" = "Eliminate %d cartelle non usate";
+"Delete folders that were created but never used for injection." = "Elimina le cartelle create ma mai usate per l'iniezione.";
+"Delete Unused Folders" = "Elimina cartelle non usate";
+"This removes only empty auto-inject folders that have never been used. Folders that already contain plug-ins will be kept." = "Rimuove solo le cartelle di auto-iniezione vuote e mai usate. Le cartelle con plug-in vengono conservate.";
+"Delete" = "Elimina";

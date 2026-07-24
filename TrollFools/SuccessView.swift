@@ -12,6 +12,7 @@ struct SuccessView: View {
     let title: String
     let subtitle: String?
     let logFileURL: URL?
+    var onDone: (() -> Void)? = nil
 
     @State private var isLogsPresented = false
 
@@ -38,6 +39,29 @@ struct SuccessView: View {
                           systemImage: "note.text")
                 }
             }
+
+            if let onDone {
+                if #available(iOS 15, *) {
+                    Button(action: onDone) {
+                        Text(NSLocalizedString("Done", comment: ""))
+                            .font(.headline)
+                            .frame(minWidth: 120)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.top, 8)
+                } else {
+                    Button(action: onDone) {
+                        Text(NSLocalizedString("Done", comment: ""))
+                            .font(.headline)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 10)
+                            .background(Color.accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .padding(.top, 8)
+                }
+            }
         }
         .padding()
         .multilineTextAlignment(.center)
@@ -53,6 +77,7 @@ struct SuccessView: View {
     SuccessView(
         title: "Hello, World!",
         subtitle: nil,
-        logFileURL: nil
+        logFileURL: nil,
+        onDone: {}
     )
 }
