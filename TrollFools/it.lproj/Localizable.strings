@@ -320,3 +320,12 @@
 "Delete Unused Folders" = "Elimina cartelle non usate";
 "This removes only empty auto-inject folders that have never been used. Folders that already contain plug-ins will be kept." = "Rimuove solo le cartelle di auto-iniezione vuote e mai usate. Le cartelle con plug-in vengono conservate.";
 "Delete" = "Elimina";
+
+"Download and Inject" = "Scarica e inietta";
+"Plugin URL" = "URL del plug-in";
+"Download" = "Scarica";
+"Paste a direct link to a .dylib, .deb, .zip, .framework, or .bundle file." = "Incolla un link diretto a un file .dylib, .deb, .zip, .framework o .bundle.";
+"Please enter a valid HTTP or HTTPS URL." = "Inserisci un URL HTTP o HTTPS valido.";
+"The download returned no file." = "Il download non ha restituito alcun file.";
+"Download failed with HTTP status %d." = "Download non riuscito con stato HTTP %d.";
+"The downloaded file is not a supported plug-in format." = "Il file scaricato non è un formato di plug-in supportato.";

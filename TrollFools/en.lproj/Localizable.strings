@@ -329,3 +329,12 @@
 "Delete Unused Folders" = "Delete Unused Folders";
 "This removes only empty auto-inject folders that have never been used. Folders that already contain plug-ins will be kept." = "This removes only empty auto-inject folders that have never been used. Folders that already contain plug-ins will be kept.";
 "Delete" = "Delete";
+
+"Download and Inject" = "Download and Inject";
+"Plugin URL" = "Plugin URL";
+"Download" = "Download";
+"Paste a direct link to a .dylib, .deb, .zip, .framework, or .bundle file." = "Paste a direct link to a .dylib, .deb, .zip, .framework, or .bundle file.";
+"Please enter a valid HTTP or HTTPS URL." = "Please enter a valid HTTP or HTTPS URL.";
+"The download returned no file." = "The download returned no file.";
+"Download failed with HTTP status %d." = "Download failed with HTTP status %d.";
+"The downloaded file is not a supported plug-in format." = "The downloaded file is not a supported plug-in format.";

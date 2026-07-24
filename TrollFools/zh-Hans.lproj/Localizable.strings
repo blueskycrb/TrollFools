@@ -329,3 +329,12 @@
 "Delete Unused Folders" = "删除未使用文件夹";
 "This removes only empty auto-inject folders that have never been used. Folders that already contain plug-ins will be kept." = "只会删除从未使用过的空自动注入文件夹。已包含插件的文件夹会保留。";
 "Delete" = "删除";
+
+"Download and Inject" = "下载并注入";
+"Plugin URL" = "插件链接";
+"Download" = "下载";
+"Paste a direct link to a .dylib, .deb, .zip, .framework, or .bundle file." = "粘贴 .dylib、.deb、.zip、.framework 或 .bundle 文件的直链。";
+"Please enter a valid HTTP or HTTPS URL." = "请输入有效的 HTTP 或 HTTPS 链接。";
+"The download returned no file." = "下载未返回文件。";
+"Download failed with HTTP status %d." = "下载失败，HTTP 状态码为 %d。";
+"The downloaded file is not a supported plug-in format." = "下载的文件不是支持的插件格式。";

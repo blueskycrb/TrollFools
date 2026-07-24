@@ -320,3 +320,12 @@
 "Delete Unused Folders" = "Xóa thư mục chưa dùng";
 "This removes only empty auto-inject folders that have never been used. Folders that already contain plug-ins will be kept." = "Chỉ xóa thư mục auto-inject trống và chưa dùng. Thư mục đã có plugin sẽ được giữ lại.";
 "Delete" = "Xóa";
+
+"Download and Inject" = "Tải xuống và inject";
+"Plugin URL" = "URL plugin";
+"Download" = "Tải xuống";
+"Paste a direct link to a .dylib, .deb, .zip, .framework, or .bundle file." = "Dán liên kết trực tiếp tới tệp .dylib, .deb, .zip, .framework hoặc .bundle.";
+"Please enter a valid HTTP or HTTPS URL." = "Vui lòng nhập URL HTTP hoặc HTTPS hợp lệ.";
+"The download returned no file." = "Tải xuống không trả về tệp nào.";
+"Download failed with HTTP status %d." = "Tải xuống thất bại với mã HTTP %d.";
+"The downloaded file is not a supported plug-in format." = "Tệp đã tải không phải định dạng plugin được hỗ trợ.";
