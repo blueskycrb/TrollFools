@@ -45,7 +45,7 @@ struct AppListView: View {
 
         let appStringFormat = """
         %@ %@
-        %@ 漏 2024-%d %@
+        %@ © 2024-%d %@
         """
 
         return String(
@@ -74,7 +74,7 @@ struct AppListView: View {
                         selectorOpenedURL = result
                         isWarningHidden = true
                     } label: {
-                        Text(NSLocalizedString("Continue and Don鈥檛 Show Again", comment: ""))
+                        Text(NSLocalizedString("Continue and Don't Show Again", comment: ""))
                     }
                     Button(role: .cancel) {
                         temporaryOpenedURL = nil
@@ -560,8 +560,8 @@ struct AppListView: View {
 
     private func reloadSearchBarPlaceholder(_ searchBar: UISearchBar, showPatchedOnly: Bool) {
         searchBar.placeholder = (showPatchedOnly
-            ? NSLocalizedString("Search Patched鈥?, comment: "")
-            : NSLocalizedString("Search鈥?, comment: ""))
+            ? NSLocalizedString("Search Patched…", comment: "")
+            : NSLocalizedString("Search…", comment: ""))
     }
 
     @ViewBuilder

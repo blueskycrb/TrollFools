@@ -53,7 +53,7 @@ struct InjectView: View {
 
     var bodyContent: some View {
         VStack {
-            if let injectResult {
+            if let injectResult = injectResult {
                 switch injectResult {
                 case let .success(payload):
                     SuccessView(
@@ -62,18 +62,20 @@ struct InjectView: View {
                             ? NSLocalizedString("Completed with compatibility mode. The plug-in may start working after opening some app features.", comment: "")
                             : nil,
                         logFileURL: payload.logFileURL,
-                        onDone: finishAndLeave
+                        onDone: { finishAndLeave() }
                     )
                     .onAppear {
+                        unlockInteraction()
                         app.reload()
                     }
                 case let .failure(error):
                     FailureView(
                         title: NSLocalizedString("Failed", comment: ""),
                         error: error,
-                        onDone: finishAndLeave
+                        onDone: { finishAndLeave() }
                     )
                     .onAppear {
+                        unlockInteraction()
                         app.reload()
                     }
                 }
@@ -102,18 +104,26 @@ struct InjectView: View {
         .onViewWillAppear { viewController in
             viewControllerHost.viewController = viewController
             if isInjecting {
-                viewController.navigationController?.view.isUserInteractionEnabled = false
+                setInteractionEnabled(false)
+            } else {
+                setInteractionEnabled(true)
             }
         }
         .onAppear {
-            guard isInjecting, injectResult == nil else { return }
+            guard isInjecting, injectResult == nil else {
+                unlockInteraction()
+                return
+            }
 
             // Wait one run-loop turn so the UIKit host is attached, then capture
             // the navigation view strongly. The previous weak host reference could
             // become nil after SuccessView replaces ProgressView, leaving the UI
             // permanently non-interactive on the Completed screen.
             DispatchQueue.main.async {
-                guard isInjecting, injectResult == nil else { return }
+                guard isInjecting, injectResult == nil else {
+                    unlockInteraction()
+                    return
+                }
 
                 let navigationView = viewControllerHost.viewController?
                     .navigationController?.view
@@ -127,15 +137,32 @@ struct InjectView: View {
                         isInjecting = false
                         app.reload()
                         navigationView?.isUserInteractionEnabled = true
-                        viewControllerHost.viewController?.navigationController?
-                            .view.isUserInteractionEnabled = true
+                        unlockInteraction()
                     }
                 }
             }
         }
+        .onDisappear {
+            unlockInteraction()
+        }
+    }
+
+    private func unlockInteraction() {
+        setInteractionEnabled(true)
+    }
+
+    private func setInteractionEnabled(_ enabled: Bool) {
+        if let navigationView = viewControllerHost.viewController?.navigationController?.view {
+            navigationView.isUserInteractionEnabled = enabled
+        }
+        if let view = viewControllerHost.viewController?.view {
+            view.isUserInteractionEnabled = enabled
+        }
     }
 
     private func finishAndLeave() {
+        unlockInteraction()
+
         guard let viewController = viewControllerHost.viewController else { return }
 
         if appList.isSelectorMode {
@@ -197,7 +224,7 @@ struct InjectView: View {
                 NSLocalizedDescriptionKey: error.localizedDescription,
             ]
 
-            if let logFileURL {
+            if let logFileURL = logFileURL {
                 userInfo[NSURLErrorKey] = logFileURL
             }
 
@@ -207,5 +234,3 @@ struct InjectView: View {
         }
     }
 }
-
-

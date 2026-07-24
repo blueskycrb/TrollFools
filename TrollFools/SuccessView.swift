@@ -12,9 +12,16 @@ struct SuccessView: View {
     let title: String
     let subtitle: String?
     let logFileURL: URL?
-    var onDone: (() -> Void)? = nil
+    let onDone: (() -> Void)?
 
     @State private var isLogsPresented = false
+
+    init(title: String, subtitle: String?, logFileURL: URL?, onDone: (() -> Void)? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+        self.logFileURL = logFileURL
+        self.onDone = onDone
+    }
 
     var body: some View {
         VStack(spacing: 20) {
@@ -26,7 +33,7 @@ struct SuccessView: View {
                 .font(.title)
                 .bold()
 
-            if let subtitle {
+            if let subtitle = subtitle {
                 Text(subtitle)
                     .font(.title3)
             }
@@ -40,44 +47,40 @@ struct SuccessView: View {
                 }
             }
 
-            if let onDone {
-                if #available(iOS 15, *) {
-                    Button(action: onDone) {
-                        Text(NSLocalizedString("Done", comment: ""))
-                            .font(.headline)
-                            .frame(minWidth: 120)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .padding(.top, 8)
-                } else {
-                    Button(action: onDone) {
-                        Text(NSLocalizedString("Done", comment: ""))
-                            .font(.headline)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 10)
-                            .background(Color.accentColor)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                    .padding(.top, 8)
-                }
+            if let onDone = onDone {
+                doneButton(onDone)
             }
         }
         .padding()
         .multilineTextAlignment(.center)
         .sheet(isPresented: $isLogsPresented) {
-            if let logFileURL {
+            if let logFileURL = logFileURL {
                 LogsView(url: logFileURL)
             }
         }
     }
-}
 
-#Preview {
-    SuccessView(
-        title: "Hello, World!",
-        subtitle: nil,
-        logFileURL: nil,
-        onDone: {}
-    )
+    @ViewBuilder
+    private func doneButton(_ action: @escaping () -> Void) -> some View {
+        if #available(iOS 15, *) {
+            Button(action: action) {
+                Text(NSLocalizedString("Done", comment: ""))
+                    .font(.headline)
+                    .frame(minWidth: 120)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.top, 8)
+        } else {
+            Button(action: action) {
+                Text(NSLocalizedString("Done", comment: ""))
+                    .font(.headline)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(Color.accentColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+            }
+            .padding(.top, 8)
+        }
+    }
 }
