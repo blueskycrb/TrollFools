@@ -60,6 +60,7 @@ jobs:
         run: |
           make package
           cp packages/*.tipa packages/*.deb .
+          for package in *.tipa; do cp "$package" "${package%.tipa}.ipa"; done
           find .theos/obj -name "*.dSYM" -exec cp -r {} . \;
 
       - name: Upload Packages
@@ -68,15 +69,19 @@ jobs:
           name: packages-${{ env.VERSION }}
           path: |
             *.tipa
+            *.ipa
             *.deb
             *.dSYM
 
       - name: Release
         uses: softprops/action-gh-release@v0.1.15
         with:
-          tag_name: v${{ env.VERSION }}
-          body_path: CHANGELOG.md
+          tag_name: ${{ env.VERSION }}
+          name: TrollFools ${{ env.VERSION }}
+          body: |
+            Sileo-style sources: batch URL import, automatic repository names, and local downloaded plug-in management.
           draft: false
           prerelease: false
           files: |
             *.tipa
+            *.ipa

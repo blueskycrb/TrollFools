@@ -48,6 +48,7 @@ final class RepoIndexManager: ObservableObject {
     @Published private(set) var packagesBySource: [UUID: [RepoPackage]] = [:]
     @Published private(set) var isRefreshingAll = false
     @Published var refreshingSourceIDs: Set<UUID> = []
+    @Published private(set) var localPlugins: [LocalPluginFile] = []
 
     private let session: URLSession
     private let queue = DispatchQueue(label: "wiki.qaq.trollfools.repos", qos: .userInitiated)
@@ -61,6 +62,7 @@ final class RepoIndexManager: ObservableObject {
         ]
         session = URLSession(configuration: config)
         sources = Self.loadSources()
+        reloadLocalPlugins()
     }
 
     var allPackages: [RepoPackage] {
@@ -76,7 +78,8 @@ final class RepoIndexManager: ObservableObject {
         packagesBySource[sourceID] ?? []
     }
 
-    func addSource(name: String, urlString: String) throws {
+    @discardableResult
+    func addSource(name: String, urlString: String) throws -> RepoSource {
         guard let baseURL = RepoSource.normalizeBaseURL(urlString) else {
             throw RepoIndexError.invalidSourceURL
         }
@@ -94,10 +97,62 @@ final class RepoIndexManager: ObservableObject {
 
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let displayName = trimmedName.isEmpty ? (baseURL.host ?? normalized) : trimmedName
-        sources.append(RepoSource(name: displayName, urlString: normalized))
+        let source = RepoSource(name: displayName, urlString: normalized)
+        sources.append(source)
         persistSources()
+        return source
     }
 
+    func addSources(
+        from rawText: String,
+        completion: @escaping (_ added: Int, _ skipped: Int, _ messages: [String]) -> Void
+    ) {
+        let urls = Self.sourceURLStrings(from: rawText)
+        guard !urls.isEmpty else {
+            completion(0, 0, [RepoIndexError.invalidSourceURL.localizedDescription])
+            return
+        }
+
+        queue.async { [weak self] in
+            guard let self else { return }
+            var resolved: [(URL, String)] = []
+            var failures: [String] = []
+
+            for rawURL in urls {
+                guard let baseURL = RepoSource.normalizeBaseURL(rawURL) else {
+                    failures.append("\(rawURL): \(RepoIndexError.invalidSourceURL.localizedDescription)")
+                    continue
+                }
+                let title = self.fetchRepositoryTitle(baseURL: baseURL)
+                    ?? baseURL.host
+                    ?? baseURL.absoluteString
+                resolved.append((baseURL, title))
+            }
+
+            DispatchQueue.main.async {
+                var added = 0
+                var skipped = failures.count
+                var messages = failures
+                var addedSources: [RepoSource] = []
+
+                for (baseURL, title) in resolved {
+                    do {
+                        let source = try self.addSource(name: title, urlString: baseURL.absoluteString)
+                        addedSources.append(source)
+                        added += 1
+                    } catch {
+                        skipped += 1
+                        messages.append("\(baseURL.absoluteString): \(error.localizedDescription)")
+                    }
+                }
+
+                for source in addedSources {
+                    self.refresh(source: source)
+                }
+                completion(added, skipped, messages)
+            }
+        }
+    }
     func removeSources(at offsets: IndexSet) {
         let removedIDs = offsets.map { sources[$0].id }
         sources.remove(atOffsets: offsets)
@@ -194,15 +249,11 @@ final class RepoIndexManager: ObservableObject {
                     response: response,
                     localURL: localURL
                 )
-                let directory = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("TrollFools-RepoDownloads", isDirectory: true)
-                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-                let destination = directory.appendingPathComponent(UUID().uuidString + "-" + fileName)
-                if FileManager.default.fileExists(atPath: destination.path) {
-                    try FileManager.default.removeItem(at: destination)
-                }
+                let directory = try Self.localPluginDirectoryURL()
+                let destination = Self.uniqueDestinationURL(fileName: fileName, in: directory)
                 try FileManager.default.copyItem(at: localURL, to: destination)
                 DispatchQueue.main.async {
+                    self.reloadLocalPlugins()
                     completion(.success(destination))
                 }
             } catch {
@@ -214,6 +265,135 @@ final class RepoIndexManager: ObservableObject {
         task.resume()
     }
 
+    func reloadLocalPlugins() {
+        do {
+            let directory = try Self.localPluginDirectoryURL()
+            let keys: Set<URLResourceKey> = [.isRegularFileKey, .fileSizeKey, .contentModificationDateKey]
+            let urls = try FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: Array(keys),
+                options: [.skipsHiddenFiles]
+            )
+            localPlugins = urls.compactMap { url in
+                guard Self.supportedPluginExtensions.contains(url.pathExtension.lowercased()),
+                      let values = try? url.resourceValues(forKeys: keys),
+                      values.isRegularFile == true
+                else { return nil }
+                return LocalPluginFile(
+                    url: url,
+                    fileSize: Int64(values.fileSize ?? 0),
+                    modifiedAt: values.contentModificationDate
+                )
+            }
+            .sorted { ($0.modifiedAt ?? .distantPast) > ($1.modifiedAt ?? .distantPast) }
+        } catch {
+            localPlugins = []
+        }
+    }
+
+    func deleteLocalPlugin(_ plugin: LocalPluginFile) throws {
+        try FileManager.default.removeItem(at: plugin.url)
+        reloadLocalPlugins()
+    }
+
+    func deleteLocalPlugins(at offsets: IndexSet) throws {
+        let items = offsets.compactMap { index in
+            localPlugins.indices.contains(index) ? localPlugins[index] : nil
+        }
+        for item in items {
+            try FileManager.default.removeItem(at: item.url)
+        }
+        reloadLocalPlugins()
+    }
+
+    func deleteAllLocalPlugins() throws {
+        for plugin in localPlugins {
+            try FileManager.default.removeItem(at: plugin.url)
+        }
+        reloadLocalPlugins()
+    }
+
+    private static func sourceURLStrings(from rawText: String) -> [String] {
+        let separators = CharacterSet.whitespacesAndNewlines
+            .union(CharacterSet(charactersIn: ",;，；"))
+        var seen = Set<String>()
+        return rawText.components(separatedBy: separators)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { value in
+                guard !value.isEmpty, RepoSource.normalizeBaseURL(value) != nil else { return false }
+                let comparable = RepoSource.normalizeBaseURL(value)?.absoluteString.lowercased() ?? value.lowercased()
+                return seen.insert(comparable).inserted
+            }
+    }
+
+    private func fetchRepositoryTitle(baseURL: URL) -> String? {
+        let releaseURLs = [
+            baseURL.appendingPathComponent("Release"),
+            baseURL.appendingPathComponent("dists/stable/Release"),
+            baseURL.appendingPathComponent("dists/main/Release"),
+        ]
+        for url in releaseURLs {
+            if let data = try? downloadData(from: url),
+               let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) {
+                let fields = Self.parseControlFields(text)
+                for key in ["label", "origin", "suite", "codename"] {
+                    if let value = fields[key]?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty {
+                        return value
+                    }
+                }
+            }
+        }
+        return fetchRepositoryTitleFromHTML(baseURL: baseURL)
+    }
+
+    private func fetchRepositoryTitleFromHTML(baseURL: URL) -> String? {
+        guard let data = try? downloadData(from: baseURL),
+              let html = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1)
+        else { return nil }
+
+        let patterns = [
+            #"<meta[^>]+(?:property|name)=[\"']og:site_name[\"'][^>]+content=[\"']([^\"']+)[\"']"#,
+            #"<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+(?:property|name)=[\"']og:site_name[\"']"#,
+            #"<title[^>]*>(.*?)</title>"#,
+        ]
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .dotMatchesLineSeparators]),
+                  let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+                  let range = Range(match.range(at: 1), in: html)
+            else { continue }
+            let title = String(html[range])
+                .replacingOccurrences(of: "&amp;", with: "&")
+                .replacingOccurrences(of: "&#39;", with: "'")
+                .replacingOccurrences(of: "&quot;", with: "\"")
+                .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !title.isEmpty { return title }
+        }
+        return nil
+    }
+
+    private static func localPluginDirectoryURL() throws -> URL {
+        let base = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let directory = base.appendingPathComponent("DownloadedPlugins", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
+    private static func uniqueDestinationURL(fileName: String, in directory: URL) -> URL {
+        let sanitized = fileName.replacingOccurrences(of: "/", with: "-")
+        var destination = directory.appendingPathComponent(sanitized)
+        guard FileManager.default.fileExists(atPath: destination.path) else { return destination }
+        let stem = destination.deletingPathExtension().lastPathComponent
+        let ext = destination.pathExtension
+        var suffix = 2
+        repeat {
+            let candidateName = ext.isEmpty ? "\(stem)-\(suffix)" : "\(stem)-\(suffix).\(ext)"
+            destination = directory.appendingPathComponent(candidateName)
+            suffix += 1
+        } while FileManager.default.fileExists(atPath: destination.path)
+        return destination
+    }
     private func updateSource(_ id: UUID, mutate: (inout RepoSource) -> Void) {
         guard let index = sources.firstIndex(where: { $0.id == id }) else { return }
         var item = sources[index]

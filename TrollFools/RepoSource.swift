@@ -102,3 +102,15 @@ struct RepoPackage: Identifiable, Hashable {
         return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
     }
 }
+
+struct LocalPluginFile: Identifiable, Hashable {
+    let url: URL
+    let fileSize: Int64
+    let modifiedAt: Date?
+
+    var id: String { url.path }
+    var displayName: String { url.lastPathComponent }
+    var formattedSize: String {
+        ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file)
+    }
+}
