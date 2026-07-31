@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA11B0012F80000100100001 /* RepoSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11B0012F80000100100002 /* RepoSource.swift */; };
+		AA11B0012F80000100100003 /* RepoIndexManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11B0012F80000100100004 /* RepoIndexManager.swift */; };
+		AA11B0012F80000100100005 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11B0012F80000100100006 /* SourcesView.swift */; };
+		AA11B0012F80000100100007 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11B0012F80000100100008 /* RootTabView.swift */; };
 		6124A06D2CD2322400C52253 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6124A06C2CD2322400C52253 /* App.swift */; };
 		6124A06F2CD2324200C52253 /* AppListModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6124A06E2CD2324200C52253 /* AppListModel.swift */; };
 		71314BDD6A204238B5795A25 /* AutoInjectionProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDB2D2667734CC89019D91A /* AutoInjectionProfile.swift */; };
@@ -146,6 +150,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AA11B0012F80000100100002 /* RepoSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepoSource.swift; sourceTree = "<group>"; };
+		AA11B0012F80000100100004 /* RepoIndexManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepoIndexManager.swift; sourceTree = "<group>"; };
+		AA11B0012F80000100100006 /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcesView.swift; sourceTree = "<group>"; };
+		AA11B0012F80000100100008 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
 		6124A06C2CD2322400C52253 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		6124A06E2CD2324200C52253 /* AppListModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppListModel.swift; sourceTree = "<group>"; };
 		ECDB2D2667734CC89019D91A /* AutoInjectionProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoInjectionProfile.swift; sourceTree = "<group>"; };
@@ -285,6 +293,7 @@
 			isa = PBXGroup;
 			children = (
 				6124A06C2CD2322400C52253 /* App.swift */,
+				AA11B0012F80000100100002 /* RepoSource.swift */,
 				6124A06E2CD2324200C52253 /* AppListModel.swift */,
 				ECDB2D2667734CC89019D91A /* AutoInjectionProfile.swift */,
 				F9814153E5E147C0854A36B0 /* AutoInjectionStore.swift */,
@@ -315,6 +324,8 @@
 				61743CD92D882CE40032696C /* PlaceholderView.swift */,
 				6124A07E2CD233BA00C52253 /* PlugInCell.swift */,
 				CC19E4BA2C561D7300E0F1B5 /* SettingsView.swift */,
+				AA11B0012F80000100100006 /* SourcesView.swift */,
+				AA11B0012F80000100100008 /* RootTabView.swift */,
 				CC1548D22C4A743200A4173E /* SuccessView.swift */,
 			);
 			name = View;
@@ -335,6 +346,7 @@
 				CCF5A0A32C4D45160097D48D /* AuxiliaryExecute.swift */,
 				CCF5A0A52C4D45400097D48D /* AuxiliaryExecute+Spawn.swift */,
 				CC80616B2E71632E00B1AA3E /* CheckUpdateManager.swift */,
+				AA11B0012F80000100100004 /* RepoIndexManager.swift */,
 				CC80616C2E71632E00B1AA3E /* CodableStorage.swift */,
 				614C0C602D7C2EBE007E9184 /* Constants.swift */,
 				CC1548DA2C4A7C7000A4173E /* Execute.swift */,
@@ -700,6 +712,10 @@
 				71314BDD6A204238B5795A25 /* AutoInjectionProfile.swift in Sources */,
 				68BA3462380844FCBC996B3E /* AutoInjectionStore.swift in Sources */,
 				A6B7D8993C7E49B7A5C4A875 /* AutoReinjectManager.swift in Sources */,
+				AA11B0012F80000100100001 /* RepoSource.swift in Sources */,
+				AA11B0012F80000100100003 /* RepoIndexManager.swift in Sources */,
+				AA11B0012F80000100100005 /* SourcesView.swift in Sources */,
+				AA11B0012F80000100100007 /* RootTabView.swift in Sources */,
 				CCB6A1192C4A58C7000D75B0 /* OptionView.swift in Sources */,
 				CCF4706E2C4A4BAB008D8197 /* AppListView.swift in Sources */,
 				614C0C6C2D7D72D4007E9184 /* IndexableScroller.swift in Sources */,

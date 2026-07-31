@@ -26,7 +26,7 @@ struct TrollFoolsApp: SwiftUI.App {
         WindowGroup {
             ZStack {
                 if isDisclaimerHidden {
-                    AppListView()
+                    RootTabView()
                         .environmentObject(appList)
                         .transition(.opacity)
                         .onAppear {

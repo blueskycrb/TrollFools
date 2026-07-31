@@ -25,6 +25,8 @@ struct OptionView: View {
 
     @State var isDownloadSheetPresented = false
 
+    @State var isSourcesPresented = false
+
     @State var numberOfPlugIns: Int = 0
 
     @AppStorage("isWarningHidden")
@@ -109,6 +111,15 @@ struct OptionView: View {
                 Label(
                     NSLocalizedString("Download and Inject", comment: ""),
                     systemImage: "link.badge.plus"
+                )
+            }
+
+            NavigationLink {
+                SourcesView(fixedTargetApp: app)
+            } label: {
+                Label(
+                    NSLocalizedString("Browse Sources", comment: ""),
+                    systemImage: "shippingbox"
                 )
             }
 
