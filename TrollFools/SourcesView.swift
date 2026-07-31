@@ -24,6 +24,7 @@ struct SourcesView: View {
     @ObservedObject private var repoManager = RepoIndexManager.shared
 
     @State private var isAddSourcePresented = false
+    @State private var isBulkDeleteSourcesPresented = false
     @State private var searchText = ""
     @State private var selectedPackage: RepoPackage?
     @State private var isDownloading = false
@@ -66,6 +67,9 @@ struct SourcesView: View {
             .toolbar { toolbarContent }
             .sheet(isPresented: $isAddSourcePresented) {
                 AddSourceView()
+            }
+            .sheet(isPresented: $isBulkDeleteSourcesPresented) {
+                BulkDeleteSourcesView()
             }
             .background(injectionNavigationLink)
             .sheet(item: $selectorOpenedURL) { wrapper in
@@ -293,6 +297,10 @@ struct SourcesView: View {
                     Image(systemName: "arrow.clockwise")
                 }
                 .disabled(repoManager.sources.isEmpty || repoManager.isRefreshingAll || isDownloading)
+                Button { isBulkDeleteSourcesPresented = true } label: {
+                    Image(systemName: "trash")
+                }
+                .disabled(repoManager.sources.isEmpty || isDownloading)
                 Button { isAddSourcePresented = true } label: {
                     Image(systemName: "plus")
                 }

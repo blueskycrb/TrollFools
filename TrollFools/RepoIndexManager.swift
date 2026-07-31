@@ -162,6 +162,16 @@ final class RepoIndexManager: ObservableObject {
         persistSources()
     }
 
+    func removeSources(_ sourcesToRemove: [RepoSource]) {
+        let removedIDs = Set(sourcesToRemove.map(\.id))
+        guard !removedIDs.isEmpty else { return }
+        sources.removeAll { removedIDs.contains($0.id) }
+        for id in removedIDs {
+            packagesBySource[id] = nil
+        }
+        persistSources()
+    }
+
     func removeSource(_ source: RepoSource) {
         sources.removeAll { $0.id == source.id }
         packagesBySource[source.id] = nil
