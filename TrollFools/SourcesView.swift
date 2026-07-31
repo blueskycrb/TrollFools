@@ -138,21 +138,25 @@ struct SourcesView: View {
 
     private var librarySection: some View {
         Section {
-            HStack(spacing: 14) {
-                SourceIcon(systemName: "shippingbox.fill", color: .gray)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(NSLocalizedString("All Packages", comment: ""))
-                        .font(Font.body.weight(.semibold))
-                    Text(NSLocalizedString("Browse packages from all added repositories", comment: ""))
-                        .font(.caption)
+            NavigationLink {
+                RepoPackageListView(source: nil, fixedTargetApp: fixedTargetApp)
+            } label: {
+                HStack(spacing: 14) {
+                    SourceIcon(systemName: "shippingbox.fill", color: .gray)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(NSLocalizedString("All Packages", comment: ""))
+                            .font(Font.body.weight(.semibold))
+                        Text(NSLocalizedString("Browse packages from all added repositories", comment: ""))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Text("\(filteredPackages.count)")
+                        .font(Font.caption.monospacedDigit())
                         .foregroundColor(.secondary)
                 }
-                Spacer()
-                Text("\(filteredPackages.count)")
-                    .font(Font.caption.monospacedDigit())
-                    .foregroundColor(.secondary)
+                .padding(.vertical, 3)
             }
-            .padding(.vertical, 3)
 
             NavigationLink {
                 LocalPluginsView(fixedTargetApp: fixedTargetApp)
@@ -203,33 +207,37 @@ struct SourcesView: View {
     }
 
     private func sourceRow(_ source: RepoSource) -> some View {
-        HStack(spacing: 14) {
-            SourceIcon(systemName: "shippingbox.fill", color: source.isEnabled ? .blue : .gray)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(source.name)
-                    .font(Font.body.weight(.semibold))
-                    .foregroundColor(source.isEnabled ? .primary : .secondary)
-                Text(source.urlString)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                if let error = source.lastError, !error.isEmpty {
-                    Text(error)
-                        .font(.caption2)
-                        .foregroundColor(.red)
-                        .lineLimit(2)
+        NavigationLink {
+            RepoPackageListView(source: source, fixedTargetApp: fixedTargetApp)
+        } label: {
+            HStack(spacing: 14) {
+                SourceIcon(systemName: "shippingbox.fill", color: source.isEnabled ? .blue : .gray)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(source.name)
+                        .font(Font.body.weight(.semibold))
+                        .foregroundColor(source.isEnabled ? .primary : .secondary)
+                    Text(source.urlString)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                    if let error = source.lastError, !error.isEmpty {
+                        Text(error)
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                            .lineLimit(2)
+                    }
+                }
+                Spacer(minLength: 8)
+                if repoManager.refreshingSourceIDs.contains(source.id) {
+                    ProgressView()
+                } else {
+                    Text("\(source.packageCount)")
+                        .font(Font.caption.monospacedDigit())
+                        .foregroundColor(.secondary)
                 }
             }
-            Spacer(minLength: 8)
-            if repoManager.refreshingSourceIDs.contains(source.id) {
-                ProgressView()
-            } else {
-                Text("\(source.packageCount)")
-                    .font(Font.caption.monospacedDigit())
-                    .foregroundColor(.secondary)
-            }
+            .padding(.vertical, 3)
         }
-        .padding(.vertical, 3)
         .contentShape(Rectangle())
         .contextMenu {
             Button { repoManager.refresh(source: source) } label: {
@@ -260,7 +268,7 @@ struct SourcesView: View {
                     Button {
                         selectedPackage = package
                     } label: {
-                        packageRow(package)
+                        PackageRow(package: package)
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
@@ -270,38 +278,6 @@ struct SourcesView: View {
 
     private var packageSectionTitle: String {
         String(format: NSLocalizedString("Packages (%d)", comment: ""), filteredPackages.count)
-    }
-
-    private func packageRow(_ package: RepoPackage) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(package.displayName)
-                    .font(Font.body.weight(.medium))
-                    .foregroundColor(.primary)
-                Spacer()
-                Text(package.version)
-                    .font(Font.caption.monospacedDigit())
-                    .foregroundColor(.secondary)
-            }
-            Text(package.package)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-            HStack(spacing: 8) {
-                Text(package.sourceName)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                if let section = package.section, !section.isEmpty {
-                    Text("•").foregroundColor(.secondary)
-                    Text(section).font(.caption2).foregroundColor(.secondary)
-                }
-                if let size = package.formattedSize {
-                    Text("•").foregroundColor(.secondary)
-                    Text(size).font(.caption2).foregroundColor(.secondary)
-                }
-            }
-        }
-        .padding(.vertical, 2)
     }
 
     @ToolbarContentBuilder
@@ -365,6 +341,239 @@ struct SourcesView: View {
         } else {
             selectorOpenedURL = URLIdentifiable(url: url)
         }
+    }
+}
+
+struct RepoPackageListView: View {
+    let source: RepoSource?
+    var fixedTargetApp: App? = nil
+
+    @ObservedObject private var repoManager = RepoIndexManager.shared
+    @State private var searchText = ""
+    @State private var selectedPackage: RepoPackage?
+    @State private var isDownloading = false
+    @State private var downloadedFileURL: URL?
+    @State private var selectorOpenedURL: URLIdentifiable?
+    @State private var injectNavigationActive = false
+    @State private var injectURLs: [URL] = []
+    @State private var activeAlert: SourcesAlert?
+
+    private var basePackages: [RepoPackage] {
+        if let source {
+            return repoManager.packages(for: source.id)
+                .filter { $0.isInjectableCandidate }
+                .sorted {
+                    $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+                }
+        }
+        return repoManager.allPackages.filter { $0.isInjectableCandidate }
+    }
+
+    private var filteredPackages: [RepoPackage] {
+        let keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !keyword.isEmpty else { return basePackages }
+        return basePackages.filter {
+            $0.displayName.localizedCaseInsensitiveContains(keyword)
+                || $0.package.localizedCaseInsensitiveContains(keyword)
+                || ($0.description?.localizedCaseInsensitiveContains(keyword) ?? false)
+                || $0.sourceName.localizedCaseInsensitiveContains(keyword)
+        }
+    }
+
+    private var title: String {
+        source?.name ?? NSLocalizedString("All Packages", comment: "")
+    }
+
+    private var isRefreshing: Bool {
+        if let source {
+            return repoManager.refreshingSourceIDs.contains(source.id)
+        }
+        return repoManager.isRefreshingAll
+    }
+
+    var body: some View {
+        List {
+            if filteredPackages.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(NSLocalizedString("No Packages", comment: ""))
+                        .font(.headline)
+                    Text(NSLocalizedString("Refresh this repository or try another search keyword.", comment: ""))
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 8)
+            } else {
+                Section(header: Text(String(format: NSLocalizedString("Packages (%d)", comment: ""), filteredPackages.count))) {
+                    ForEach(filteredPackages) { package in
+                        Button {
+                            selectedPackage = package
+                        } label: {
+                            PackageRow(package: package)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .modifier(SourcesSearchModifier(searchText: $searchText))
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: 12) {
+                    if isDownloading || isRefreshing { ProgressView() }
+                    Button { refreshPackages() } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .disabled(isDownloading || isRefreshing)
+                }
+            }
+        }
+        .background(injectionNavigationLink)
+        .sheet(item: $selectorOpenedURL) { wrapper in
+            AppListView()
+                .environmentObject(AppListModel(selectorURL: wrapper.url))
+        }
+        .sheet(item: $selectedPackage) { package in
+            NavigationView {
+                PackageDetailView(
+                    package: package,
+                    isDownloading: $isDownloading,
+                    onDownload: { download(package) }
+                )
+            }
+            .navigationViewStyle(.stack)
+        }
+        .alert(item: $activeAlert) { alert -> Alert in
+            switch alert {
+            case let .downloadError(message):
+                return Alert(
+                    title: Text(NSLocalizedString("Error", comment: "")),
+                    message: Text(message),
+                    dismissButton: .default(Text("OK"))
+                )
+            case let .injectConfirm(message):
+                return Alert(
+                    title: Text(NSLocalizedString("Download Completed", comment: "")),
+                    message: Text(message),
+                    primaryButton: .default(Text(NSLocalizedString("Inject", comment: ""))) {
+                        handleInjectConfirmed()
+                    },
+                    secondaryButton: .cancel(Text(NSLocalizedString("Cancel", comment: ""))) {
+                        downloadedFileURL = nil
+                    }
+                )
+            }
+        }
+        .onAppear {
+            if let source, repoManager.packages(for: source.id).isEmpty, source.isEnabled {
+                repoManager.refresh(source: source)
+            } else if source == nil, repoManager.allPackages.isEmpty {
+                repoManager.refreshAll()
+            }
+        }
+    }
+
+    private var injectionNavigationLink: some View {
+        NavigationLink(
+            destination: Group {
+                if let app = fixedTargetApp, !injectURLs.isEmpty {
+                    InjectView(app, urlList: injectURLs)
+                } else {
+                    EmptyView()
+                }
+            },
+            isActive: $injectNavigationActive
+        ) { EmptyView() }
+        .hidden()
+    }
+
+    private var injectConfirmMessage: String {
+        let fileName = downloadedFileURL?.lastPathComponent ?? ""
+        if let app = fixedTargetApp {
+            return String(
+                format: NSLocalizedString("Download finished: %@. Inject into %@ now?", comment: ""),
+                fileName,
+                app.name
+            )
+        }
+        return String(
+            format: NSLocalizedString("Download finished: %@. Choose an app to inject?", comment: ""),
+            fileName
+        )
+    }
+
+    private func refreshPackages() {
+        if let source {
+            repoManager.refresh(source: source)
+        } else {
+            repoManager.refreshAll()
+        }
+    }
+
+    private func download(_ package: RepoPackage) {
+        guard !isDownloading else { return }
+        isDownloading = true
+        repoManager.downloadPackage(package) { result in
+            isDownloading = false
+            selectedPackage = nil
+            switch result {
+            case let .success(url):
+                downloadedFileURL = url
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    activeAlert = .injectConfirm(injectConfirmMessage)
+                }
+            case let .failure(error):
+                activeAlert = .downloadError(error.localizedDescription)
+            }
+        }
+    }
+
+    private func handleInjectConfirmed() {
+        guard let url = downloadedFileURL else { return }
+        if fixedTargetApp != nil {
+            injectURLs = [url]
+            injectNavigationActive = true
+        } else {
+            selectorOpenedURL = URLIdentifiable(url: url)
+        }
+    }
+}
+
+private struct PackageRow: View {
+    let package: RepoPackage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(package.displayName)
+                    .font(Font.body.weight(.medium))
+                    .foregroundColor(.primary)
+                Spacer()
+                Text(package.version)
+                    .font(Font.caption.monospacedDigit())
+                    .foregroundColor(.secondary)
+            }
+            Text(package.package)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+            HStack(spacing: 8) {
+                Text(package.sourceName)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                if let section = package.section, !section.isEmpty {
+                    Text("•").foregroundColor(.secondary)
+                    Text(section).font(.caption2).foregroundColor(.secondary)
+                }
+                if let size = package.formattedSize {
+                    Text("•").foregroundColor(.secondary)
+                    Text(size).font(.caption2).foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
 
