@@ -204,7 +204,7 @@ struct SourcesView: View {
 
     private func sourceRow(_ source: RepoSource) -> some View {
         HStack(spacing: 14) {
-            SourceIcon(systemName: "shippingbox.fill", color: source.isEnabled ? .teal : .gray)
+            SourceIcon(systemName: "shippingbox.fill", color: source.isEnabled ? .blue : .gray)
             VStack(alignment: .leading, spacing: 3) {
                 Text(source.name)
                     .font(Font.body.weight(.semibold))
@@ -515,7 +515,7 @@ struct LocalPluginsView: View {
                 ForEach(repoManager.localPlugins) { plugin in
                     Button { inject(plugin.url) } label: {
                         HStack(spacing: 12) {
-                            SourceIcon(systemName: "puzzlepiece.extension.fill", color: .indigo)
+                            SourceIcon(systemName: "puzzlepiece.extension.fill", color: .purple)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(plugin.displayName)
                                     .foregroundColor(.primary)
