@@ -2,7 +2,7 @@
 
 This directory builds the current TrollFools injection engine into the binary-only `TrollStore_2.1.1_0702.tar` release without rebuilding its unpublished modifications.
 
-The resulting TrollStore app adds three actions to each installed app menu:
+The resulting TrollStore app adds two actions to each installed app menu:
 
 - Inject with TrollFools
 - Manage TrollFools plugins
