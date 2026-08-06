@@ -44,15 +44,16 @@ final class AutoReinjectManager {
         }
     }
 
-    func reconcileNow(completion: @escaping () -> Void) {
+    func reconcileNow(completion: @escaping ([String]) -> Void) {
         queue.async { [weak self] in
-            self?.reconcileAll(attempt: 0)
-            completion()
+            completion(self?.reconcileAll(attempt: 0) ?? [])
         }
     }
 
-    private func reconcileAll(attempt: Int) {
+    @discardableResult
+    private func reconcileAll(attempt: Int) -> [String] {
         var shouldRetry = false
+        var failures = [String]()
 
         for profile in AutoInjectionStore.shared.allProfiles()
             where profile.autoReinjectEnabled && profile.plugins.contains(where: { $0.enabled })
@@ -62,6 +63,7 @@ final class AutoReinjectManager {
                     try reconcile(profile)
                 } catch {
                     shouldRetry = true
+                    failures.append("\(profile.bundleIdentifier): \(error.localizedDescription)")
                     AutoInjectionStore.shared.recordError(
                         bundleIdentifier: profile.bundleIdentifier,
                         error: error
@@ -74,11 +76,14 @@ final class AutoReinjectManager {
             }
         }
 
-        guard shouldRetry, attempt < 2 else { return }
-        let retryDelay: TimeInterval = attempt == 0 ? 15 : 30
-        queue.asyncAfter(deadline: .now() + retryDelay) { [weak self] in
-            self?.reconcileAll(attempt: attempt + 1)
+        if shouldRetry, attempt < 2 {
+            let retryDelay: TimeInterval = attempt == 0 ? 15 : 30
+            queue.asyncAfter(deadline: .now() + retryDelay) { [weak self] in
+                self?.reconcileAll(attempt: attempt + 1)
+            }
         }
+
+        return failures
     }
 
     private func reconcile(_ profile: AutoInjectionProfile) throws {

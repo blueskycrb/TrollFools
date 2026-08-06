@@ -128,9 +128,17 @@ struct CmdReconcile: ParsableCommand {
 
     func run() throws {
         let semaphore = DispatchSemaphore(value: 0)
-        AutoReinjectManager.shared.reconcileNow {
+        var failures = [String]()
+        AutoReinjectManager.shared.reconcileNow { result in
+            failures = result
             semaphore.signal()
         }
         semaphore.wait()
+
+        guard failures.isEmpty else {
+            throw ArgumentParser.ValidationError(
+                "Automatic reinjection failed:\n\(failures.joined(separator: "\n"))"
+            )
+        }
     }
 }

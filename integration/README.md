@@ -2,9 +2,10 @@
 
 This directory builds the current TrollFools injection engine into the binary-only `TrollStore_2.1.1_0702.tar` release without rebuilding its unpublished modifications.
 
-The resulting TrollStore app adds two actions to each installed app menu:
+The resulting TrollStore app adds three actions to each installed app menu:
 
 - Inject with TrollFools
+- Download and Inject
 - Manage TrollFools plugins
 
 Automatic reconciliation runs when TrollStore launches or becomes active. Injection assets and profiles use the same `/var/mobile/Library/TrollFools` paths as the standalone app. No local auto-inject folder is created or scanned.

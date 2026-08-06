@@ -19,6 +19,7 @@ struct Entry: ParsableCommand {
             CmdView.self,
             CmdInject.self,
             CmdEject.self,
+            CmdPluginState.self,
             CmdPlugins.self,
             CmdReconcile.self,
         ]

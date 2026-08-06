@@ -6,6 +6,7 @@
 #import <objc/message.h>
 #import <objc/runtime.h>
 #import <spawn.h>
+#import <string.h>
 #import <sys/wait.h>
 
 extern char **environ;
@@ -23,6 +24,8 @@ static TFPresentIMP TFOriginalDelegatePresent;
 static const void *TFInjectedActionsKey = &TFInjectedActionsKey;
 static NSDictionary *TFPendingAppInfo;
 static NSTimeInterval TFLastReconcileTime;
+static BOOL TFReconcileCycleActive;
+static BOOL TFReconcilePending;
 
 static NSString *TFText(NSString *english, NSString *chinese) {
     NSString *language = NSLocale.preferredLanguages.firstObject.lowercaseString;
@@ -240,6 +243,33 @@ static void TFRunVisibleCommand(NSArray<NSString *> *arguments,
     });
 }
 
+static NSSet<NSString *> *TFSupportedPluginExtensions(void) {
+    static NSSet<NSString *> *extensions;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        extensions = [NSSet setWithArray:@[@"dylib", @"deb", @"zip", @"framework", @"bundle"]];
+    });
+    return extensions;
+}
+
+static void TFInjectPluginPaths(NSString *bundleIdentifier, NSString *appName,
+                                NSArray<NSString *> *paths, NSURL *cleanupURL) {
+    NSMutableArray<NSString *> *arguments = [NSMutableArray arrayWithObjects:
+        @"inject", bundleIdentifier, @"--path", nil];
+    [arguments addObjectsFromArray:paths];
+    [arguments addObject:@"--weak"];
+
+    NSString *success = [NSString stringWithFormat:
+        TFText(@"Injected into %@.", @"\u5df2\u6ce8\u5165 %@\u3002"), appName];
+    TFRunVisibleCommand(arguments,
+                        TFText(@"Injecting with TrollFools", @"\u6b63\u5728\u4f7f\u7528 TrollFools \u6ce8\u5165"),
+                        success,
+                        ^(__unused NSString *output) {
+        if (cleanupURL) [[NSFileManager defaultManager] removeItemAtURL:cleanupURL error:nil];
+        TFPresentAlert(TFText(@"Completed", @"\u5df2\u5b8c\u6210"), success);
+    });
+}
+
 @interface TFPluginPickerDelegate : NSObject <UIDocumentPickerDelegate>
 @property (nonatomic, copy) NSString *bundleIdentifier;
 @property (nonatomic, copy) NSString *appName;
@@ -251,8 +281,7 @@ static TFPluginPickerDelegate *TFPickerDelegate;
 
 - (void)documentPicker:(UIDocumentPickerViewController *)controller
     didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
-    NSSet<NSString *> *allowedExtensions = [NSSet setWithArray:
-        @[@"dylib", @"deb", @"zip", @"framework", @"bundle"]];
+    NSSet<NSString *> *allowedExtensions = TFSupportedPluginExtensions();
     NSURL *stagingURL = [TFWorkingDirectory() URLByAppendingPathComponent:NSUUID.UUID.UUIDString
                                                               isDirectory:YES];
     NSError *error = nil;
@@ -304,19 +333,7 @@ static TFPluginPickerDelegate *TFPickerDelegate;
         return;
     }
 
-    NSMutableArray<NSString *> *arguments = [NSMutableArray arrayWithObjects:
-        @"inject", self.bundleIdentifier, @"--path", nil];
-    [arguments addObjectsFromArray:stagedPaths];
-    [arguments addObject:@"--weak"];
-    NSString *success = [NSString stringWithFormat:
-        TFText(@"Injected into %@.", @"\u5df2\u6ce8\u5165 %@\u3002"), self.appName];
-    TFRunVisibleCommand(arguments,
-                        TFText(@"Injecting with TrollFools", @"\u6b63\u5728\u4f7f\u7528 TrollFools \u6ce8\u5165"),
-                        success,
-                        ^(__unused NSString *output) {
-        [[NSFileManager defaultManager] removeItemAtURL:stagingURL error:nil];
-        TFPresentAlert(TFText(@"Completed", @"\u5df2\u5b8c\u6210"), success);
-    });
+    TFInjectPluginPaths(self.bundleIdentifier, self.appName, stagedPaths, stagingURL);
 }
 
 @end
@@ -339,6 +356,173 @@ static void TFPresentPluginPicker(NSString *bundleIdentifier, NSString *appName)
     [TFTopViewController() presentViewController:picker animated:YES completion:nil];
 }
 
+static NSError *TFDownloadError(NSInteger code, NSString *description) {
+    return [NSError errorWithDomain:@"TrollFoolsIntegration.Download" code:code
+                           userInfo:@{NSLocalizedDescriptionKey: description}];
+}
+
+static NSString *TFDownloadedPluginFileName(NSURLResponse *response, NSURL *sourceURL,
+                                             NSURL *localURL, NSError **error) {
+    NSMutableArray<NSString *> *candidates = [NSMutableArray new];
+    if (response.suggestedFilename.length) [candidates addObject:response.suggestedFilename];
+    if (response.URL.lastPathComponent.length) [candidates addObject:response.URL.lastPathComponent];
+    if (sourceURL.lastPathComponent.length) [candidates addObject:sourceURL.lastPathComponent];
+
+    for (NSString *candidate in candidates) {
+        NSString *name = candidate.lastPathComponent;
+        if ([TFSupportedPluginExtensions() containsObject:name.pathExtension.lowercaseString]) {
+            return name;
+        }
+    }
+
+    NSString *detectedExtension = nil;
+    NSString *mimeType = response.MIMEType.lowercaseString;
+    if ([mimeType isEqualToString:@"application/zip"] ||
+        [mimeType isEqualToString:@"application/x-zip-compressed"]) {
+        detectedExtension = @"zip";
+    } else if ([mimeType isEqualToString:@"application/vnd.debian.binary-package"] ||
+               [mimeType isEqualToString:@"application/x-debian-package"]) {
+        detectedExtension = @"deb";
+    }
+
+    if (!detectedExtension) {
+        NSFileHandle *handle = [[NSFileHandle alloc] initForReadingFromURL:localURL error:error];
+        if (!handle) return nil;
+        NSData *magic = [handle readDataOfLength:8];
+        [handle closeFile];
+        const unsigned char *bytes = magic.bytes;
+        if (magic.length >= 4 && bytes[0] == 0x50 && bytes[1] == 0x4B &&
+            bytes[2] == 0x03 && bytes[3] == 0x04) {
+            detectedExtension = @"zip";
+        } else if (magic.length >= 8 && !memcmp(bytes, "!<arch>\n", 8)) {
+            detectedExtension = @"deb";
+        } else if (magic.length >= 4) {
+            uint32_t value = 0;
+            memcpy(&value, bytes, sizeof(value));
+            if (value == 0xFEEDFACE || value == 0xCEFAEDFE || value == 0xFEEDFACF ||
+                value == 0xCFFAEDFE || value == 0xCAFEBABE || value == 0xBEBAFECA) {
+                detectedExtension = @"dylib";
+            }
+        }
+    }
+
+    if (!detectedExtension) {
+        if (error) {
+            *error = TFDownloadError(4, TFText(@"The downloaded file is not a supported plugin type.",
+                                               @"\u4e0b\u8f7d\u7684\u6587\u4ef6\u4e0d\u662f\u652f\u6301\u7684\u63d2\u4ef6\u7c7b\u578b\u3002"));
+        }
+        return nil;
+    }
+    return [NSString stringWithFormat:@"DownloadedPlugin.%@", detectedExtension];
+}
+
+static void TFDownloadAndInjectURL(NSURL *sourceURL, NSString *bundleIdentifier, NSString *appName) {
+    UIAlertController *progress = TFPresentProgress(
+        TFText(@"Downloading plugin", @"\u6b63\u5728\u4e0b\u8f7d\u63d2\u4ef6"));
+    NSURLSessionConfiguration *configuration = NSURLSessionConfiguration.ephemeralSessionConfiguration;
+    configuration.timeoutIntervalForRequest = 60;
+    configuration.timeoutIntervalForResource = 300;
+    __block NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
+    NSURLSessionDownloadTask *task = [session downloadTaskWithURL:sourceURL
+                                                completionHandler:^(NSURL *localURL, NSURLResponse *response,
+                                                                    NSError *downloadError) {
+        NSError *error = downloadError;
+        NSURL *stagingURL = nil;
+        NSString *destinationPath = nil;
+        NSHTTPURLResponse *httpResponse = [response isKindOfClass:NSHTTPURLResponse.class]
+            ? (NSHTTPURLResponse *)response : nil;
+        const unsigned long long maximumSize = 100ULL * 1024ULL * 1024ULL;
+
+        if (!error && httpResponse && (httpResponse.statusCode < 200 || httpResponse.statusCode > 299)) {
+            error = TFDownloadError(httpResponse.statusCode,
+                                    [NSString stringWithFormat:TFText(@"Download failed with HTTP status %ld.",
+                                                                      @"\u4e0b\u8f7d\u5931\u8d25\uff0cHTTP \u72b6\u6001\u7801\u4e3a %ld\u3002"),
+                                     (long)httpResponse.statusCode]);
+        }
+        if (!error && response.expectedContentLength > (long long)maximumSize) {
+            error = TFDownloadError(2, TFText(@"The plugin exceeds the 100 MB download limit.",
+                                              @"\u63d2\u4ef6\u8d85\u8fc7 100 MB \u4e0b\u8f7d\u9650\u5236\u3002"));
+        }
+        if (!error && !localURL) {
+            error = TFDownloadError(3, TFText(@"The download returned no file.", @"\u4e0b\u8f7d\u672a\u8fd4\u56de\u6587\u4ef6\u3002"));
+        }
+
+        if (!error) {
+            NSNumber *fileSize = nil;
+            [localURL getResourceValue:&fileSize forKey:NSURLFileSizeKey error:&error];
+            if (!error && fileSize.unsignedLongLongValue > maximumSize) {
+                error = TFDownloadError(2, TFText(@"The plugin exceeds the 100 MB download limit.",
+                                                  @"\u63d2\u4ef6\u8d85\u8fc7 100 MB \u4e0b\u8f7d\u9650\u5236\u3002"));
+            }
+        }
+
+        NSString *fileName = nil;
+        if (!error) fileName = TFDownloadedPluginFileName(response, sourceURL, localURL, &error);
+        if (!error) {
+            stagingURL = [TFWorkingDirectory() URLByAppendingPathComponent:NSUUID.UUID.UUIDString
+                                                               isDirectory:YES];
+            [[NSFileManager defaultManager] createDirectoryAtURL:stagingURL
+                                      withIntermediateDirectories:YES attributes:nil error:&error];
+        }
+        if (!error) {
+            NSURL *destination = [stagingURL URLByAppendingPathComponent:fileName isDirectory:NO];
+            [[NSFileManager defaultManager] copyItemAtURL:localURL toURL:destination error:&error];
+            destinationPath = destination.path;
+        }
+
+        [session finishTasksAndInvalidate];
+        session = nil;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [progress dismissViewControllerAnimated:YES completion:^{
+                if (error) {
+                    if (stagingURL) [[NSFileManager defaultManager] removeItemAtURL:stagingURL error:nil];
+                    TFPresentAlert(TFText(@"Download failed", @"\u4e0b\u8f7d\u5931\u8d25"), error.localizedDescription);
+                } else {
+                    TFInjectPluginPaths(bundleIdentifier, appName, @[destinationPath], stagingURL);
+                }
+            }];
+        });
+    }];
+    [task resume];
+}
+
+static void TFPresentDownloadAndInject(NSString *bundleIdentifier, NSString *appName) {
+    UIViewController *presenter = TFTopViewController();
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:
+        TFText(@"Download and Inject", @"\u4e0b\u8f7d\u5e76\u6ce8\u5165")
+        message:TFText(@"Paste a direct HTTP or HTTPS plugin URL.",
+                       @"\u7c98\u8d34 HTTP \u6216 HTTPS \u63d2\u4ef6\u76f4\u94fe\u3002")
+        preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = @"https://example.com/plugin.dylib";
+        textField.keyboardType = UIKeyboardTypeURL;
+        textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
+        textField.autocorrectionType = UITextAutocorrectionTypeNo;
+        NSString *clipboard = UIPasteboard.generalPasteboard.string;
+        if (clipboard.length) textField.text = clipboard;
+    }];
+    [alert addAction:[UIAlertAction actionWithTitle:TFText(@"Cancel", @"\u53d6\u6d88")
+                                              style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:TFText(@"Download", @"\u4e0b\u8f7d")
+                                              style:UIAlertActionStyleDefault
+                                            handler:^(__unused UIAlertAction *action) {
+        NSString *value = [alert.textFields.firstObject.text
+            stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+        NSURL *url = [NSURL URLWithString:value];
+        NSString *scheme = url.scheme.lowercaseString;
+        if (!url || (![@"http" isEqualToString:scheme] && ![@"https" isEqualToString:scheme])) {
+            TFPresentAlert(TFText(@"Invalid URL", @"\u94fe\u63a5\u65e0\u6548"),
+                           TFText(@"Please enter a valid HTTP or HTTPS URL.",
+                                  @"\u8bf7\u8f93\u5165\u6709\u6548\u7684 HTTP \u6216 HTTPS \u94fe\u63a5\u3002"));
+            return;
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            TFDownloadAndInjectURL(url, bundleIdentifier, appName);
+        });
+    }]];
+    [presenter presentViewController:alert animated:YES completion:nil];
+}
+
 static NSArray *TFParsePluginJSON(NSString *output) {
     NSRange start = [output rangeOfString:@"["];
     NSRange end = [output rangeOfString:@"]" options:NSBackwardsSearch];
@@ -353,6 +537,47 @@ static void TFRemovePlugin(NSString *bundleIdentifier, NSString *path) {
     TFRunVisibleCommand(@[@"eject", bundleIdentifier, @"--path", path],
                         TFText(@"Removing plugin", @"\u6b63\u5728\u79fb\u9664\u63d2\u4ef6"),
                         TFText(@"Plugin removed.", @"\u63d2\u4ef6\u5df2\u79fb\u9664\u3002"), nil);
+}
+
+static void TFSetPluginEnabled(NSString *bundleIdentifier, NSString *path, BOOL enabled) {
+    NSArray<NSString *> *arguments = @[
+        @"plugin-state", bundleIdentifier, @"--path", path,
+        enabled ? @"--enable" : @"--disable",
+    ];
+    TFRunVisibleCommand(arguments,
+                        enabled
+                            ? TFText(@"Enabling plugin", @"\u6b63\u5728\u542f\u7528\u63d2\u4ef6")
+                            : TFText(@"Pausing plugin", @"\u6b63\u5728\u6682\u505c\u63d2\u4ef6"),
+                        enabled
+                            ? TFText(@"Plugin enabled.", @"\u63d2\u4ef6\u5df2\u542f\u7528\u3002")
+                            : TFText(@"Plugin paused and kept for later.", @"\u63d2\u4ef6\u5df2\u6682\u505c\u5e76\u4fdd\u7559\u3002"),
+                        nil);
+}
+
+static void TFPresentPluginActions(NSString *bundleIdentifier, NSString *name,
+                                   NSString *path, BOOL enabled) {
+    UIViewController *presenter = TFTopViewController();
+    NSString *status = enabled
+        ? TFText(@"Currently enabled", @"\u5f53\u524d\u5df2\u542f\u7528")
+        : TFText(@"Currently paused", @"\u5f53\u524d\u5df2\u6682\u505c");
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:name
+                                                                    message:status
+                                                             preferredStyle:UIAlertControllerStyleActionSheet];
+    [sheet addAction:[UIAlertAction actionWithTitle:
+        (enabled ? TFText(@"Pause", @"\u6682\u505c") : TFText(@"Enable", @"\u542f\u7528"))
+                                              style:UIAlertActionStyleDefault
+                                            handler:^(__unused UIAlertAction *action) {
+        TFSetPluginEnabled(bundleIdentifier, path, !enabled);
+    }]];
+    [sheet addAction:[UIAlertAction actionWithTitle:TFText(@"Remove", @"\u5f7b\u5e95\u79fb\u9664")
+                                              style:UIAlertActionStyleDestructive
+                                            handler:^(__unused UIAlertAction *action) {
+        TFRemovePlugin(bundleIdentifier, path);
+    }]];
+    [sheet addAction:[UIAlertAction actionWithTitle:TFText(@"Cancel", @"\u53d6\u6d88")
+                                              style:UIAlertActionStyleCancel handler:nil]];
+    TFConfigurePopover(sheet, presenter);
+    [presenter presentViewController:sheet animated:YES completion:nil];
 }
 
 static void TFPresentPluginManager(NSString *bundleIdentifier, NSString *appName) {
@@ -379,10 +604,13 @@ static void TFPresentPluginManager(NSString *bundleIdentifier, NSString *appName
             BOOL enabled = [plugin[@"enabled"] boolValue];
             if (!name || !path) continue;
             NSString *title = [NSString stringWithFormat:@"%@ (%@)", name,
-                enabled ? TFText(@"enabled", @"\u5df2\u542f\u7528") : TFText(@"stored", @"\u5df2\u4fdd\u5b58")];
-            [sheet addAction:[UIAlertAction actionWithTitle:title style:UIAlertActionStyleDestructive
-                                                    handler:^(__unused UIAlertAction *action) {
-                TFRemovePlugin(bundleIdentifier, path);
+                enabled ? TFText(@"enabled", @"\u5df2\u542f\u7528") : TFText(@"paused", @"\u5df2\u6682\u505c")];
+            [sheet addAction:[UIAlertAction actionWithTitle:title style:UIAlertActionStyleDefault
+                                                     handler:^(__unused UIAlertAction *action) {
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_MSEC * 200),
+                               dispatch_get_main_queue(), ^{
+                    TFPresentPluginActions(bundleIdentifier, name, path, enabled);
+                });
             }]];
         }
         [sheet addAction:[UIAlertAction actionWithTitle:TFText(@"Remove all", @"\u79fb\u9664\u5168\u90e8")
@@ -408,6 +636,11 @@ static void TFAppendActionsToAlert(UIAlertController *alert, NSString *bundleIde
                                               style:UIAlertActionStyleDefault
                                             handler:^(__unused UIAlertAction *action) {
         TFPresentPluginPicker(bundleIdentifier, appName);
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:TFText(@"Download and Inject", @"\u4e0b\u8f7d\u5e76\u6ce8\u5165")
+                                              style:UIAlertActionStyleDefault
+                                            handler:^(__unused UIAlertAction *action) {
+        TFPresentDownloadAndInject(bundleIdentifier, appName);
     }]];
     [alert addAction:[UIAlertAction actionWithTitle:TFText(@"Manage TrollFools plugins", @"\u7ba1\u7406 TrollFools \u63d2\u4ef6")
                                               style:UIAlertActionStyleDefault
@@ -509,13 +742,46 @@ static void TFInstallHook(void) {
     });
 }
 
-static void TFReconcileIfNeeded(void) {
-    NSTimeInterval now = NSDate.date.timeIntervalSince1970;
-    if (now - TFLastReconcileTime < 15) return;
-    TFLastReconcileTime = now;
+static void TFReconcileIfNeeded(void);
+
+static void TFRunReconcileAttempt(NSUInteger attempt) {
     TFRunCLI(@[@"reconcile"], ^(int exitCode, NSString *output) {
-        if (exitCode != 0) NSLog(@"[TrollFoolsIntegration] Reconcile failed (%d): %@", exitCode, output);
+        if (exitCode != 0 && attempt < 2) {
+            NSTimeInterval delay = attempt == 0 ? 3 : 10;
+            NSLog(@"[TrollFoolsIntegration] Reconcile attempt %lu failed (%d), retrying: %@",
+                  (unsigned long)(attempt + 1), exitCode, output);
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)),
+                           dispatch_get_main_queue(), ^{
+                TFRunReconcileAttempt(attempt + 1);
+            });
+            return;
+        }
+
+        if (exitCode != 0) {
+            NSLog(@"[TrollFoolsIntegration] Reconcile failed after retries (%d): %@", exitCode, output);
+        }
+        TFReconcileCycleActive = NO;
+        if (TFReconcilePending) {
+            TFReconcilePending = NO;
+            TFLastReconcileTime = 0;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                TFReconcileIfNeeded();
+            });
+        }
     });
+}
+
+static void TFReconcileIfNeeded(void) {
+    if (TFReconcileCycleActive) {
+        TFReconcilePending = YES;
+        return;
+    }
+
+    NSTimeInterval now = NSDate.date.timeIntervalSince1970;
+    if (now - TFLastReconcileTime < 2) return;
+    TFLastReconcileTime = now;
+    TFReconcileCycleActive = YES;
+    TFRunReconcileAttempt(0);
 }
 
 __attribute__((constructor)) static void TFIntegrationInitialize(void) {
@@ -526,6 +792,11 @@ __attribute__((constructor)) static void TFIntegrationInitialize(void) {
                                                    usingBlock:^(__unused NSNotification *notification) {
             TFReconcileIfNeeded();
         }];
-        TFReconcileIfNeeded();
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC),
+                       dispatch_get_main_queue(), ^{
+            if (UIApplication.sharedApplication.applicationState == UIApplicationStateActive) {
+                TFReconcileIfNeeded();
+            }
+        });
     });
 }
