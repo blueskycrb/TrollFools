@@ -6,10 +6,9 @@ on:
       - integration/trollstore-0702
   workflow_dispatch:
     inputs:
-      base_release_tag:
-        description: Draft release tag containing the base TrollStore archive
-        required: true
-        default: trollstore-0702-input
+      base_asset_id:
+        description: Release asset ID containing the base TrollStore archive
+        required: false
       base_asset_name:
         description: Base TrollStore archive asset name
         required: true
@@ -38,14 +37,14 @@ jobs:
       - name: Download base TrollStore archive
         env:
           GH_TOKEN: ${{ github.token }}
-          BASE_RELEASE_TAG: ${{ inputs.base_release_tag || vars.TROLLSTORE_BASE_RELEASE_TAG }}
+          BASE_ASSET_ID: ${{ inputs.base_asset_id || vars.TROLLSTORE_BASE_ASSET_ID }}
           BASE_ASSET_NAME: ${{ inputs.base_asset_name || 'TrollStore_2.1.1_0702.tar' }}
         run: |
           mkdir -p integration/input
-          gh release download "$BASE_RELEASE_TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --pattern "$BASE_ASSET_NAME" \
-            --dir integration/input
+          gh api \
+            -H 'Accept: application/octet-stream' \
+            "repos/$GITHUB_REPOSITORY/releases/assets/$BASE_ASSET_ID" \
+            > "integration/input/$BASE_ASSET_NAME"
 
       - name: Build patched TrollStore archive
         env:
