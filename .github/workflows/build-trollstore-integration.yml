@@ -15,7 +15,7 @@ on:
         default: TrollStore_2.1.1_0702.tar
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
