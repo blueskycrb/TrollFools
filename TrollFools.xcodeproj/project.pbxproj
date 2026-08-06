@@ -12,6 +12,9 @@
 		71314BDD6A204238B5795A25 /* AutoInjectionProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDB2D2667734CC89019D91A /* AutoInjectionProfile.swift */; };
 		68BA3462380844FCBC996B3E /* AutoInjectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9814153E5E147C0854A36B0 /* AutoInjectionStore.swift */; };
 		A6B7D8993C7E49B7A5C4A875 /* AutoReinjectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E891B12FAC194FBD82EA1BE1 /* AutoReinjectManager.swift */; };
+		A10C1E012F10000000000001 /* AutoInjectionProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDB2D2667734CC89019D91A /* AutoInjectionProfile.swift */; };
+		A10C1E012F10000000000002 /* AutoInjectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9814153E5E147C0854A36B0 /* AutoInjectionStore.swift */; };
+		A10C1E012F10000000000003 /* AutoReinjectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E891B12FAC194FBD82EA1BE1 /* AutoReinjectManager.swift */; };
 		6124A0712CD2326500C52253 /* FilterOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6124A0702CD2326500C52253 /* FilterOptions.swift */; };
 		6124A0742CD2328600C52253 /* AppListCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6124A0732CD2328600C52253 /* AppListCell.swift */; };
 		6124A0762CD232C600C52253 /* Option.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6124A0752CD232C600C52253 /* Option.swift */; };
@@ -634,6 +637,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10C1E012F10000000000001 /* AutoInjectionProfile.swift in Sources */,
+				A10C1E012F10000000000002 /* AutoInjectionStore.swift in Sources */,
+				A10C1E012F10000000000003 /* AutoReinjectManager.swift in Sources */,
 				614C0C532D7C2E98007E9184 /* Execute.swift in Sources */,
 				614C0C542D7C2E98007E9184 /* InjectorV3+MachO.swift in Sources */,
 				614C0C552D7C2E98007E9184 /* InjectorV3+Metadata.swift in Sources */,

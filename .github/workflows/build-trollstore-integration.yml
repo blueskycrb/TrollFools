@@ -1,0 +1,61 @@
+name: Build TrollStore Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_release_tag:
+        description: Draft release tag containing the base TrollStore archive
+        required: true
+        default: trollstore-0702-input
+      base_asset_name:
+        description: Base TrollStore archive asset name
+        required: true
+        default: TrollStore_2.1.1_0702.tar
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
+
+      - name: Install host dependencies
+        run: |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install openssl@3 pkg-config
+          echo "PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig" >> "$GITHUB_ENV"
+
+      - name: Download base TrollStore archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_RELEASE_TAG: ${{ inputs.base_release_tag }}
+          BASE_ASSET_NAME: ${{ inputs.base_asset_name }}
+        run: |
+          mkdir -p integration/input
+          gh release download "$BASE_RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "$BASE_ASSET_NAME" \
+            --dir integration/input
+
+      - name: Build patched TrollStore archive
+        env:
+          BASE_ASSET_NAME: ${{ inputs.base_asset_name }}
+        run: |
+          chmod +x integration/build-patched-trollstore.sh
+          integration/build-patched-trollstore.sh \
+            "integration/input/$BASE_ASSET_NAME" \
+            "integration/TrollStore_2.1.1_0702_TrollFools.tar"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrollStore-2.1.1-0702-TrollFools
+          path: integration/TrollStore_2.1.1_0702_TrollFools.tar
+          if-no-files-found: error

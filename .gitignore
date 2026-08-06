@@ -8,6 +8,8 @@ compile_commands.json
 ### macOS ###
 # General
 .DS_Store
+integration/input/
+integration/*.tar
 .AppleDouble
 .LSOverride
 

@@ -83,6 +83,13 @@ final class AutoReinjectManager {
         }
     }
 
+    func reconcileNow(completion: @escaping () -> Void) {
+        queue.async { [weak self] in
+            self?.reconcileAll(attempt: 0)
+            completion()
+        }
+    }
+
     func createAllInstalledApplicationDirectories(completion: @escaping (Int) -> Void) {
         queue.async { [weak self] in
             guard let self else { return }

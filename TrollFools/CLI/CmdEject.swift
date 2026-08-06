@@ -43,14 +43,25 @@ struct CmdEject: ParsableCommand {
             throw ArgumentParser.ValidationError("The specified application does not exist.")
         }
         if let pluginPath {
-            if let pluginURL = URL(string: pluginPath),
-               FileManager.default.fileExists(atPath: pluginPath) {
+            if FileManager.default.fileExists(atPath: pluginPath) {
+                let pluginURL = URL(fileURLWithPath: pluginPath)
                 try InjectorV3(bundleURL, loggerType: .os).eject([pluginURL], shouldDesist: true)
+                AutoInjectionStore.shared.removePlugins(
+                    bundleIdentifier: bundleIdentifier,
+                    fileNames: [pluginURL.lastPathComponent]
+                )
             } else {
                 throw ArgumentParser.ValidationError("The specified plugin path is invalid.")
             }
         } else if ejectAll {
+            let fileNames = InjectorV3(bundleURL, loggerType: .os)
+                .persistedAssetURLs(bid: bundleIdentifier)
+                .map(\.lastPathComponent)
             try InjectorV3(bundleURL, loggerType: .os).ejectAll(shouldDesist: true)
+            AutoInjectionStore.shared.removePlugins(
+                bundleIdentifier: bundleIdentifier,
+                fileNames: fileNames
+            )
         } else {
             throw ArgumentParser.ValidationError("No plugin to eject.")
         }

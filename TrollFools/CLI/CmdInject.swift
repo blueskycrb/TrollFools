@@ -26,6 +26,15 @@ struct CmdInject: ParsableCommand {
     @Flag(name: [.customLong("weak")], help: "Use weak reference.")
     var weakReference: Bool = false
 
+    @Flag(name: [.customLong("prefer-main")], help: "Prefer the main executable as the injection target.")
+    var preferMainExecutable: Bool = false
+
+    @Flag(name: [.customLong("no-framework-fallback")], help: "Disable framework enumeration fallback.")
+    var disableFrameworkFallback: Bool = false
+
+    @Option(name: [.customLong("strategy")], help: "Injection strategy: lexicographic, fast, preorder, or postorder.")
+    var strategy: String = InjectorV3.Strategy.lexicographic.rawValue
+
     func run() throws {
         guard let app = LSApplicationProxy(forIdentifier: bundleIdentifier),
               let appID = app.applicationIdentifier(),
@@ -39,6 +48,9 @@ struct CmdInject: ParsableCommand {
             }
         }
         let pluginURLs = pluginPaths.compactMap { URL(fileURLWithPath: $0) }
+        guard let selectedStrategy = InjectorV3.Strategy(rawValue: strategy) else {
+            throw ArgumentParser.ValidationError("Unsupported injection strategy: \(strategy)")
+        }
         let injector = try InjectorV3(bundleURL, loggerType: .os)
         if injector.appID.isEmpty {
             injector.appID = appID
@@ -51,7 +63,95 @@ struct CmdInject: ParsableCommand {
             }
         }
         injector.useWeakReference = weakReference
-        injector.injectStrategy = fastInjection ? .fast : .lexicographic
-        try injector.inject(pluginURLs, shouldPersist: false)
+        injector.preferMainExecutable = preferMainExecutable
+        injector.useFrameworkEnumerationFallback = !disableFrameworkFallback
+        injector.injectStrategy = fastInjection ? .fast : selectedStrategy
+        let preparedURLs = try injector.inject(pluginURLs, shouldPersist: true)
+        AutoInjectionStore.shared.recordInjection(
+            bundleIdentifier: appID,
+            bundleURL: bundleURL,
+            shortVersion: app.shortVersionString(),
+            preparedURLs: preparedURLs,
+            useWeakReference: weakReference,
+            preferMainExecutable: preferMainExecutable,
+            useFrameworkEnumerationFallback: !disableFrameworkFallback,
+            injectStrategy: injector.injectStrategy
+        )
+    }
+}
+
+struct CmdPlugins: ParsableCommand {
+    static var configuration = CommandConfiguration(
+        commandName: "plugins",
+        abstract: "Print injected and persisted plugins as JSON."
+    )
+
+    @Argument(help: "The bundle identifier of the application.")
+    var bundleIdentifier: String
+
+    private struct Plugin: Codable {
+        let name: String
+        let path: String
+        let enabled: Bool
+    }
+
+    func run() throws {
+        guard let app = LSApplicationProxy(forIdentifier: bundleIdentifier),
+              let bundleURL = app.bundleURL()
+        else {
+            throw ArgumentParser.ValidationError("The specified application does not exist.")
+        }
+
+        let injector = try InjectorV3(bundleURL, loggerType: .os)
+        let injected = injector.injectedAssetURLsInBundle(bundleURL)
+        let enabledNames = Set(injected.map(\.lastPathComponent))
+        var plugins = injected.map {
+            Plugin(name: $0.lastPathComponent, path: $0.path, enabled: true)
+        }
+        plugins += injector.persistedAssetURLs(bid: bundleIdentifier)
+            .filter { !enabledNames.contains($0.lastPathComponent) }
+            .map { Plugin(name: $0.lastPathComponent, path: $0.path, enabled: false) }
+        plugins.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(plugins)
+        print(String(decoding: data, as: UTF8.self))
+    }
+}
+
+struct CmdReconcile: ParsableCommand {
+    static var configuration = CommandConfiguration(
+        commandName: "reconcile",
+        abstract: "Scan local auto-inject folders and restore persisted plugins."
+    )
+
+    func run() throws {
+        let semaphore = DispatchSemaphore(value: 0)
+        AutoReinjectManager.shared.reconcileNow {
+            semaphore.signal()
+        }
+        semaphore.wait()
+    }
+}
+
+struct CmdPrepareFolder: ParsableCommand {
+    static var configuration = CommandConfiguration(
+        commandName: "prepare-folder",
+        abstract: "Create the local auto-inject folder for an application."
+    )
+
+    @Argument(help: "The bundle identifier of the application.")
+    var bundleIdentifier: String
+
+    func run() throws {
+        guard let app = LSApplicationProxy(forIdentifier: bundleIdentifier) else {
+            throw ArgumentParser.ValidationError("The specified application does not exist.")
+        }
+        let url = AutoReinjectManager.shared.localAutoInjectDirectory(
+            bundleIdentifier: bundleIdentifier,
+            displayName: app.localizedName()
+        )
+        print(url.path)
     }
 }
