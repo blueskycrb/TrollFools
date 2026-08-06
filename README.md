@@ -21,53 +21,20 @@ TrollFools 是一款运行在 **TrollStore（巨魔商店）环境**下的 iOS �
 - TrollFools 会保存目标 App 已启用的插件记录。
 - 当目标 App 更新、安装包被替换后，可自动重新注入原来启用的插件。
 - 如果 App 更新时 TrollFools 没有运行，将在下次打开 TrollFools 后检查并恢复。
-- iOS 不允许普通应用永久在后台运行，因此完全关闭 TrollFools 后，仍需再次打开它才能执行扫描和恢复。
-
-### 本地 AutoInject 文件夹
-
-自动注入目录位于：
-
-```text
-iCloud Drive
-└── TrollFools
-    └── AutoInject
-```
-
-每个目标 App 使用独立目录：
-
-```text
-AutoInject
-└── 应用名称
-    ├── _BundleIdentifier.txt
-    ├── _TargetApp.txt
-    └── 插件.dylib
-```
-
-把插件放入对应 App 的目录后，返回 TrollFools 并保持前台数秒，程序会自动扫描并处理新增或替换的插件。
-
-### 文件夹创建方式
-
-- **单个创建**：进入目标 App 的“高级选项”，点击“创建本地自动注入文件夹”。
-- **批量创建**：在 TrollFools 首页点击“批量创建所有应用文件夹”，一次性为所有已安装的第三方 App 创建目录。
-- 目录优先使用应用名称，避免只显示难以识别的 Bundle ID。
-- 已创建的目标目录会被保留，即使目录中暂时没有插件也不会被自动删除。
+- iOS 不允许普通应用永久在后台运行，因此完全关闭 TrollFools 后，仍需再次打开它才能执行恢复。
 
 ### 其他调整
 
 - 修复 CoreTrust 辅助工具 `ct_bypass` 无法执行的问题。
 - 改善辅助命令启动失败时的错误日志。
-- 修复 AutoInject 目录重复生成、创建后消失及扫描路径不一致的问题。
 - 移除首页广告内容。
 
 ## 使用方法
 
 1. 使用 TrollStore 安装 Release 页面提供的 `.ipa` 文件。
 2. 打开 TrollFools。
-3. 在首页批量创建目录，或者进入单个 App 的高级选项创建目录。
-4. 打开系统“文件”App，进入 `iCloud Drive/TrollFools/AutoInject`。
-5. 将插件复制到对应 App 名称的文件夹中，不要直接放在 `AutoInject` 根目录。
-6. 返回 TrollFools，并保持应用处于前台约 8 秒。
-7. 在 TrollFools 中查看处理结果；需要时可查看日志或目录中的 `_LastResult.txt`。
+3. 选择目标 App 和插件并执行注入。
+4. App 更新后重新打开 TrollFools，程序会按已启用记录自动恢复插件。
 
 ## 支持范围
 

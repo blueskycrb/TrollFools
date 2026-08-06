@@ -123,7 +123,7 @@ struct CmdPlugins: ParsableCommand {
 struct CmdReconcile: ParsableCommand {
     static var configuration = CommandConfiguration(
         commandName: "reconcile",
-        abstract: "Scan local auto-inject folders and restore persisted plugins."
+        abstract: "Restore persisted plugins after application updates."
     )
 
     func run() throws {
@@ -132,26 +132,5 @@ struct CmdReconcile: ParsableCommand {
             semaphore.signal()
         }
         semaphore.wait()
-    }
-}
-
-struct CmdPrepareFolder: ParsableCommand {
-    static var configuration = CommandConfiguration(
-        commandName: "prepare-folder",
-        abstract: "Create the local auto-inject folder for an application."
-    )
-
-    @Argument(help: "The bundle identifier of the application.")
-    var bundleIdentifier: String
-
-    func run() throws {
-        guard let app = LSApplicationProxy(forIdentifier: bundleIdentifier) else {
-            throw ArgumentParser.ValidationError("The specified application does not exist.")
-        }
-        let url = AutoReinjectManager.shared.localAutoInjectDirectory(
-            bundleIdentifier: bundleIdentifier,
-            displayName: app.localizedName()
-        )
-        print(url.path)
     }
 }

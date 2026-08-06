@@ -12,7 +12,7 @@ The integration must preserve the original application binary as much as possibl
 
 ## Decision
 
-Build `TrollFoolsIntegration.dylib`, load it from the existing TrollStore executable, and hook only `TSAppTableViewController`'s existing `showActionsForAppAtIndexPath:` entry. The module adds injection, plugin management, and auto-inject-folder commands to each app's action menu.
+Build `TrollFoolsIntegration.dylib`, load it from the existing TrollStore executable, and hook the 0702 action entry plus the standard table selection fallback. The module adds injection and plugin management to each app's action menu.
 
 The module invokes a separately signed `trollfoolscli` with argument arrays. The CLI owns the injection behavior and reuses `InjectorV3`, persistence, profile storage, framework fallback, and automatic reconciliation code from TrollFools. External files are validated and copied to an isolated staging directory before the privileged CLI runs.
 
@@ -29,13 +29,13 @@ The packaging script uses the official TrollStore `fastPathSign` implementation 
 
 ### Negative
 
-- A future binary that removes or renames `showActionsForAppAtIndexPath:` needs a new adapter.
+- A future binary that removes or renames the supported app-selection entries needs a new adapter.
 - The integration cannot be source-level tested against the unpublished TrollStore changes.
 - Final device validation is still required because Windows cannot execute iOS arm64 products.
 
 ### Neutral
 
-- TrollFools data remains under `/var/mobile/Library/TrollFools` and its iCloud Drive auto-inject directory.
+- TrollFools data remains under `/var/mobile/Library/TrollFools`; enabled plugin profiles are shared with the standalone app.
 
 ## Alternatives Considered
 

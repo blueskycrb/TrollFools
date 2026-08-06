@@ -6,9 +6,8 @@ The resulting TrollStore app adds three actions to each installed app menu:
 
 - Inject with TrollFools
 - Manage TrollFools plugins
-- Create auto-inject folder
 
-Automatic reconciliation runs when TrollStore becomes active. Injection assets and profiles use the same `/var/mobile/Library/TrollFools` paths as the standalone app.
+Automatic reconciliation runs when TrollStore launches or becomes active. Injection assets and profiles use the same `/var/mobile/Library/TrollFools` paths as the standalone app. No local auto-inject folder is created or scanned.
 
 ## Build
 

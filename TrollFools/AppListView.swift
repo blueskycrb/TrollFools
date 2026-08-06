@@ -26,8 +26,6 @@ struct AppListView: View {
     @State var temporaryOpenedURL: URLIdentifiable? = nil
 
     @State var latestVersionString: String?
-    @State var isCreatingAllAutoInjectFolders = false
-    @State var preparedAutoInjectFolderCount: Int?
 
     @AppStorage("isWarningHidden")
     var isWarningHidden: Bool = false
@@ -270,10 +268,6 @@ struct AppListView: View {
 
     var topSection: some View {
         Section {
-            if !appList.isSelectorMode {
-                batchCreateAutoInjectFoldersButton
-            }
-
             if AppListModel.hasTrollStore && appList.isRebuildNeeded {
                 rebuildButton
                     .transition(.opacity)
@@ -302,57 +296,6 @@ struct AppListView: View {
             }
         }
         .id("TopSection")
-    }
-
-    var batchCreateAutoInjectFoldersButton: some View {
-        Button {
-            guard !isCreatingAllAutoInjectFolders else { return }
-            isCreatingAllAutoInjectFolders = true
-            preparedAutoInjectFolderCount = nil
-
-            AutoReinjectManager.shared.createAllInstalledApplicationDirectories { count in
-                preparedAutoInjectFolderCount = count
-                isCreatingAllAutoInjectFolders = false
-                AutoReinjectManager.shared.schedule(after: 0)
-            }
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(batchCreateAutoInjectFoldersTitle)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-
-                    Text(NSLocalizedString("Create folders for all installed third-party applications at once.", comment: ""))
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
-
-                if isCreatingAllAutoInjectFolders {
-                    ProgressView()
-                } else {
-                    Image(systemName: "folder.badge.plus")
-                        .font(.title2)
-                        .foregroundColor(.accentColor)
-                }
-            }
-            .padding(.vertical, 4)
-        }
-        .disabled(isCreatingAllAutoInjectFolders)
-    }
-
-    private var batchCreateAutoInjectFoldersTitle: String {
-        if isCreatingAllAutoInjectFolders {
-            return NSLocalizedString("Creating application folders...", comment: "")
-        }
-        if let preparedAutoInjectFolderCount {
-            return String(
-                format: NSLocalizedString("Prepared %d application folders", comment: ""),
-                preparedAutoInjectFolderCount
-            )
-        }
-        return NSLocalizedString("Create All Application Folders", comment: "")
     }
 
     var rebuildButton: some View {

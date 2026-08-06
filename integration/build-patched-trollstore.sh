@@ -110,6 +110,10 @@ for name in "${RUNTIME_EXECUTABLES[@]}"; do
 done
 
 echo "Patching and signing Mach-O files..."
+for name in "${RUNTIME_EXECUTABLES[@]}" "${RUNTIME_LIBRARIES[@]}"; do
+  "$FAST_PATH_SIGN" "$APP_PATH/$name"
+done
+
 "$INSERT_DYLIB" \
   '@executable_path/TrollFoolsIntegration.dylib' \
   "$APP_PATH/TrollStore" \

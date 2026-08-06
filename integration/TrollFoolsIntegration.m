@@ -399,14 +399,6 @@ static void TFPresentPluginManager(NSString *bundleIdentifier, NSString *appName
     });
 }
 
-static void TFPrepareFolder(NSString *bundleIdentifier) {
-    TFRunVisibleCommand(@[@"prepare-folder", bundleIdentifier],
-                        TFText(@"Creating folder", @"\u6b63\u5728\u521b\u5efa\u76ee\u5f55"), @"", ^(NSString *output) {
-        NSString *path = [output stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
-        TFPresentAlert(TFText(@"Folder ready", @"\u76ee\u5f55\u5df2\u521b\u5efa"), path);
-    });
-}
-
 static void TFAppendActionsToAlert(UIAlertController *alert, NSString *bundleIdentifier, NSString *appName) {
     if (!alert || bundleIdentifier.length == 0) return;
     if (objc_getAssociatedObject(alert, TFInjectedActionsKey)) return;
@@ -421,11 +413,6 @@ static void TFAppendActionsToAlert(UIAlertController *alert, NSString *bundleIde
                                               style:UIAlertActionStyleDefault
                                             handler:^(__unused UIAlertAction *action) {
         TFPresentPluginManager(bundleIdentifier, appName);
-    }]];
-    [alert addAction:[UIAlertAction actionWithTitle:TFText(@"Create auto-inject folder", @"\u521b\u5efa\u81ea\u52a8\u6ce8\u5165\u76ee\u5f55")
-                                              style:UIAlertActionStyleDefault
-                                            handler:^(__unused UIAlertAction *action) {
-        TFPrepareFolder(bundleIdentifier);
     }]];
 }
 
@@ -539,5 +526,6 @@ __attribute__((constructor)) static void TFIntegrationInitialize(void) {
                                                    usingBlock:^(__unused NSNotification *notification) {
             TFReconcileIfNeeded();
         }];
+        TFReconcileIfNeeded();
     });
 }

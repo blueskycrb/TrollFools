@@ -21,9 +21,9 @@ final class InjectorV3 {
 
     static let main = try! InjectorV3(Bundle.main.bundleURL)
 
-    // Automatic folder scanning and the manual injection UI run on different
-    // queues. Modifying the same application bundle concurrently can corrupt an
-    // operation or make both operations fail. Serialize every inject/eject action.
+    // The manual injection UI and automatic reinjection run on different queues.
+    // Modifying the same application bundle concurrently can corrupt an operation
+    // or make both operations fail. Serialize every inject/eject action.
     private static let operationLock = NSRecursiveLock()
 
     func withOperationLock<T>(_ body: () throws -> T) rethrows -> T {
