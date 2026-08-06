@@ -1,6 +1,9 @@
 name: Build TrollStore Integration
 
 on:
+  push:
+    branches:
+      - integration/trollstore-0702
   workflow_dispatch:
     inputs:
       base_release_tag:
@@ -35,8 +38,8 @@ jobs:
       - name: Download base TrollStore archive
         env:
           GH_TOKEN: ${{ github.token }}
-          BASE_RELEASE_TAG: ${{ inputs.base_release_tag }}
-          BASE_ASSET_NAME: ${{ inputs.base_asset_name }}
+          BASE_RELEASE_TAG: ${{ inputs.base_release_tag || vars.TROLLSTORE_BASE_RELEASE_TAG }}
+          BASE_ASSET_NAME: ${{ inputs.base_asset_name || 'TrollStore_2.1.1_0702.tar' }}
         run: |
           mkdir -p integration/input
           gh release download "$BASE_RELEASE_TAG" \
@@ -46,7 +49,7 @@ jobs:
 
       - name: Build patched TrollStore archive
         env:
-          BASE_ASSET_NAME: ${{ inputs.base_asset_name }}
+          BASE_ASSET_NAME: ${{ inputs.base_asset_name || 'TrollStore_2.1.1_0702.tar' }}
         run: |
           chmod +x integration/build-patched-trollstore.sh
           integration/build-patched-trollstore.sh \
