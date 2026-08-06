@@ -1,5 +1,25 @@
 # Changelog
 
+## 4.3 Build 273 (2026-08-06)
+
+### 调整
+
+- 移除本地自动注入文件夹的创建、扫描与自动导入。插件仅在用户主动选择或下载后注入。
+- 保留应用更新后的自动恢复：打开 TrollFools 或返回前台时，会按已保存的配置重新注入之前启用的插件。
+- 插件启用状态继续保留；已暂停的插件不会被自动注入。
+
+------
+
+## 4.3 Build 273 (2026-08-06) [EN]
+
+### Changed
+
+- Removed creation, scanning, and automatic import of the local auto-injection folder. Plugins are injected only after explicit selection or download.
+- Preserved automatic restoration after app updates. Opening TrollFools or returning it to the foreground reinjects previously enabled plugins from saved profiles.
+- Plugin state remains persistent; paused plugins are not reinjected.
+
+------
+
 ## 4.3 Build 253 (2026-04-23)
 
 修复与 MachOKit 有关的一处断言崩溃。
