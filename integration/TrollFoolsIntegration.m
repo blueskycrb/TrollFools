@@ -386,8 +386,14 @@ static NSString *TFDownloadedPluginFileName(NSURLResponse *response, NSURL *sour
     }
 
     if (!detectedExtension) {
-        NSFileHandle *handle = [[NSFileHandle alloc] initForReadingFromURL:localURL error:error];
-        if (!handle) return nil;
+        NSFileHandle *handle = [NSFileHandle fileHandleForReadingAtPath:localURL.path];
+        if (!handle) {
+            if (error) {
+                *error = TFDownloadError(5, TFText(@"Unable to inspect the downloaded file.",
+                                                   @"\u65e0\u6cd5\u68c0\u67e5\u4e0b\u8f7d\u7684\u6587\u4ef6\u3002"));
+            }
+            return nil;
+        }
         NSData *magic = [handle readDataOfLength:8];
         [handle closeFile];
         const unsigned char *bytes = magic.bytes;
