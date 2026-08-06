@@ -11,12 +11,15 @@
 extern char **environ;
 
 typedef void (*TFShowActionsIMP)(id, SEL, NSIndexPath *);
+typedef void (*TFDidSelectIMP)(id, SEL, UITableView *, NSIndexPath *);
 typedef void (*TFPresentIMP)(id, SEL, UIViewController *, BOOL, void (^)(void));
 typedef int (*TFPersonaSetIMP)(posix_spawnattr_t *, uid_t, uint32_t);
 typedef int (*TFPersonaIDIMP)(posix_spawnattr_t *, uid_t);
 
 static TFShowActionsIMP TFOriginalShowActions;
+static TFDidSelectIMP TFOriginalDidSelect;
 static TFPresentIMP TFOriginalPresent;
+static TFPresentIMP TFOriginalDelegatePresent;
 static const void *TFInjectedActionsKey = &TFInjectedActionsKey;
 static NSDictionary *TFPendingAppInfo;
 static NSTimeInterval TFLastReconcileTime;
@@ -115,8 +118,10 @@ static id TFAppInfoAtIndexPath(id controller, NSIndexPath *indexPath) {
             return nil;
         }
     }
-    if (![appInfos isKindOfClass:NSArray.class] || indexPath.item >= appInfos.count) return nil;
-    return appInfos[indexPath.item];
+    NSUInteger row = indexPath.row;
+    if (row == NSNotFound && indexPath.item != NSNotFound) row = indexPath.item;
+    if (![appInfos isKindOfClass:NSArray.class] || row == NSNotFound || row >= appInfos.count) return nil;
+    return appInfos[row];
 }
 
 static NSString *TFValidatedBundleIdentifier(id appInfo) {
@@ -424,16 +429,28 @@ static void TFAppendActionsToAlert(UIAlertController *alert, NSString *bundleIde
     }]];
 }
 
+static void TFAppendPendingActionsIfNeeded(UIViewController *viewController) {
+    NSDictionary *pending = TFPendingAppInfo;
+    if (!pending || ![viewController isKindOfClass:UIAlertController.class]) return;
+    UIAlertController *alert = (UIAlertController *)viewController;
+    if (alert.preferredStyle != UIAlertControllerStyleActionSheet) return;
+
+    TFAppendActionsToAlert(alert, pending[@"bundleIdentifier"], pending[@"appName"]);
+    TFPendingAppInfo = nil;
+}
+
 static void TFHookedPresent(id self, SEL selector, UIViewController *viewController,
                             BOOL animated, void (^completion)(void)) {
-    NSDictionary *pending = TFPendingAppInfo;
-    if (pending && [viewController isKindOfClass:UIAlertController.class] &&
-        ((UIAlertController *)viewController).preferredStyle == UIAlertControllerStyleActionSheet) {
-        TFAppendActionsToAlert((UIAlertController *)viewController,
-                               pending[@"bundleIdentifier"], pending[@"appName"]);
-        TFPendingAppInfo = nil;
+    TFAppendPendingActionsIfNeeded(viewController);
+    if (TFOriginalPresent) TFOriginalPresent(self, selector, viewController, animated, completion);
+}
+
+static void TFHookedDelegatePresent(id self, SEL selector, UIViewController *viewController,
+                                    BOOL animated, void (^completion)(void)) {
+    TFAppendPendingActionsIfNeeded(viewController);
+    if (TFOriginalDelegatePresent) {
+        TFOriginalDelegatePresent(self, selector, viewController, animated, completion);
     }
-    TFOriginalPresent(self, selector, viewController, animated, completion);
 }
 
 static void TFHookedShowActions(id self, SEL selector, NSIndexPath *indexPath) {
@@ -446,7 +463,21 @@ static void TFHookedShowActions(id self, SEL selector, NSIndexPath *indexPath) {
             TFPendingAppInfo = nil;
         });
     }
-    TFOriginalShowActions(self, selector, indexPath);
+    if (TFOriginalShowActions) TFOriginalShowActions(self, selector, indexPath);
+}
+
+static void TFHookedDidSelect(id self, SEL selector, UITableView *tableView, NSIndexPath *indexPath) {
+    id appInfo = TFAppInfoAtIndexPath(self, indexPath);
+    NSString *bundleIdentifier = TFValidatedBundleIdentifier(appInfo);
+    NSString *appName = TFStringFromObject(appInfo, NSSelectorFromString(@"displayName")) ?: bundleIdentifier;
+    if (bundleIdentifier) {
+        TFPendingAppInfo = @{ @"bundleIdentifier": bundleIdentifier,
+                              @"appName": appName ?: bundleIdentifier };
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            TFPendingAppInfo = nil;
+        });
+    }
+    if (TFOriginalDidSelect) TFOriginalDidSelect(self, selector, tableView, indexPath);
 }
 
 static void TFInstallHook(void) {
@@ -455,17 +486,39 @@ static void TFInstallHook(void) {
         Class controllerClass = NSClassFromString(@"TSAppTableViewController");
         SEL selector = NSSelectorFromString(@"showActionsForAppAtIndexPath:");
         Method method = controllerClass ? class_getInstanceMethod(controllerClass, selector) : NULL;
-        if (!method) {
-            NSLog(@"[TrollFoolsIntegration] Compatible app action entry was not found.");
-            return;
+        if (method) {
+            TFOriginalShowActions = (TFShowActionsIMP)method_setImplementation(method, (IMP)TFHookedShowActions);
+            NSLog(@"[TrollFoolsIntegration] Installed custom app action hook.");
+        } else {
+            NSLog(@"[TrollFoolsIntegration] Custom app action entry was not found.");
         }
-        TFOriginalShowActions = (TFShowActionsIMP)method_setImplementation(method, (IMP)TFHookedShowActions);
+
+        SEL didSelectSelector = @selector(tableView:didSelectRowAtIndexPath:);
+        Method didSelectMethod = controllerClass ? class_getInstanceMethod(controllerClass, didSelectSelector) : NULL;
+        if (didSelectMethod) {
+            TFOriginalDidSelect = (TFDidSelectIMP)method_setImplementation(didSelectMethod, (IMP)TFHookedDidSelect);
+            NSLog(@"[TrollFoolsIntegration] Installed table selection fallback hook.");
+        }
+
         Method presentMethod = class_getInstanceMethod(UIViewController.class,
                                                         @selector(presentViewController:animated:completion:));
         if (presentMethod) {
             TFOriginalPresent = (TFPresentIMP)method_setImplementation(presentMethod, (IMP)TFHookedPresent);
         }
-        NSLog(@"[TrollFoolsIntegration] Installed TrollFools app action hook.");
+
+        Class presentationDelegate = NSClassFromString(@"TSPresentationDelegate");
+        Method delegatePresentMethod = presentationDelegate
+            ? class_getClassMethod(presentationDelegate, @selector(presentViewController:animated:completion:))
+            : NULL;
+        if (delegatePresentMethod) {
+            TFOriginalDelegatePresent = (TFPresentIMP)method_setImplementation(delegatePresentMethod,
+                                                                                 (IMP)TFHookedDelegatePresent);
+            NSLog(@"[TrollFoolsIntegration] Installed presentation delegate hook.");
+        }
+
+        if (!method && !didSelectMethod) {
+            NSLog(@"[TrollFoolsIntegration] Compatible app selection entry was not found.");
+        }
     });
 }
 
