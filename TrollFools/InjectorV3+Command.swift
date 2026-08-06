@@ -139,7 +139,10 @@ extension InjectorV3 {
             ], ddlog: logger)
 
             guard case let .exit(code) = receipt.terminationReason, code == EXIT_SUCCESS else {
-                try throwCommandFailure("ldid", reason: receipt.terminationReason)
+                try throwCommandFailure(
+                    "ldid (extract entitlements)",
+                    receipt: receipt
+                )
             }
 
             let xmlContent = receipt.stdout
@@ -154,7 +157,10 @@ extension InjectorV3 {
             ], ddlog: logger)
 
             guard case let .exit(code) = receipt.terminationReason, code == EXIT_SUCCESS else {
-                try throwCommandFailure("ldid", reason: receipt.terminationReason)
+                try throwCommandFailure(
+                    "ldid (sign executable)",
+                    receipt: receipt
+                )
             }
         } else {
             let retCode = try Execute.rootSpawn(binary: Self.ldidBinaryURL.path, arguments: [
@@ -344,6 +350,22 @@ extension InjectorV3 {
             throw Error.generic(String(format: NSLocalizedString("%@ exited with code %d", comment: ""), command, code))
         case let .uncaughtSignal(signal):
             throw Error.generic(String(format: NSLocalizedString("%@ terminated with signal %d", comment: ""), command, signal))
+        }
+    }
+
+    fileprivate func throwCommandFailure(
+        _ command: String,
+        receipt: AuxiliaryExecute.ExecuteReceipt
+    ) throws -> Never {
+        let stderr = receipt.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+        let stdout = receipt.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        let detail = stderr.isEmpty ? stdout : stderr
+
+        do {
+            try throwCommandFailure(command, reason: receipt.terminationReason)
+        } catch {
+            guard !detail.isEmpty else { throw error }
+            throw Error.generic("\(error.localizedDescription): \(detail)")
         }
     }
 
