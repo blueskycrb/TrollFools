@@ -139,9 +139,9 @@ codesign -d "$APP_PATH/TrollFoolsIntegration.dylib" >/dev/null
 for name in trollfoolscli TrollFoolsIntegration.dylib CydiaSubstrate.framework.zip; do
   test -e "$APP_PATH/$name"
 done
-strings "$APP_PATH/trollfoolscli" | grep -F 'plugin-state'
-strings "$APP_PATH/TrollFoolsIntegration.dylib" | grep -F 'Download and Inject'
-strings "$APP_PATH/TrollFoolsIntegration.dylib" | grep -F 'Plugin paused and kept for later.'
+LC_ALL=C grep -aF 'plugin-state' "$APP_PATH/trollfoolscli"
+LC_ALL=C grep -aF 'Download and Inject' "$APP_PATH/TrollFoolsIntegration.dylib"
+LC_ALL=C grep -aF 'Plugin paused and kept for later.' "$APP_PATH/TrollFoolsIntegration.dylib"
 
 rm -f "$OUTPUT_TAR"
 COPYFILE_DISABLE=1 tar -cf "$OUTPUT_TAR" -C "$APP_ROOT" TrollStore.app
