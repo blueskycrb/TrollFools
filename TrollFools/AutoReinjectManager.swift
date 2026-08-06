@@ -622,7 +622,9 @@ final class AutoReinjectManager {
             message: "Automatic injection succeeded\n\(Date())\nSources: \(sourceNames)\nInjected: \(preparedNames)"
         )
         DispatchQueue.main.async {
+            #if !TROLLFOOLS_CLI
             App.reload(bundleIdentifier: bundleIdentifier)
+            #endif
         }
     }
 

@@ -54,7 +54,7 @@ struct CmdEject: ParsableCommand {
                 throw ArgumentParser.ValidationError("The specified plugin path is invalid.")
             }
         } else if ejectAll {
-            let fileNames = InjectorV3(bundleURL, loggerType: .os)
+            let fileNames = try InjectorV3(bundleURL, loggerType: .os)
                 .persistedAssetURLs(bid: bundleIdentifier)
                 .map(\.lastPathComponent)
             try InjectorV3(bundleURL, loggerType: .os).ejectAll(shouldDesist: true)
