@@ -17,7 +17,7 @@
 "Advertisement" = "Advertisement";
 
 /* TODO */
-"After the app upgrade, any injected plugins will be disabled. You will need to manually re-enable them." = "After the app upgrade, any injected plugins will be disabled. You will need to manually re-enable them.";
+"After an app update, previously enabled plug-ins are restored automatically when TrollFools is opened." = "Dopo l'aggiornamento di un'app, i plug-in precedentemente abilitati vengono ripristinati automaticamente all'apertura di TrollFools.";
 
 /* TODO */
 "All" = "All";
@@ -312,3 +312,28 @@
 
 "Automatically Reinject After App Updates" = "Reinietta automaticamente dopo gli aggiornamenti";
 "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened." = "Quando un aggiornamento sostituisce l'app, TrollFools ripristina solo i plug-in che erano abilitati. Se TrollFools non era in esecuzione, il ripristino avviene alla successiva apertura.";
+
+"Add" = "Aggiungi";
+"Add Source" = "Aggiungi sorgente";
+"After downloading, select the app that should receive this plug-in." = "Dopo il download, seleziona l'app in cui iniettare il plug-in.";
+"Architecture" = "Architettura";
+"Author" = "Autore";
+"Description" = "Descrizione";
+"Download and Inject" = "Scarica e inietta";
+"Download Size" = "Dimensione download";
+"Enter a valid HTTPS repository URL." = "Inserisci un URL HTTPS valido per il repository.";
+"Enter the root URL of a Sileo or Cydia repository that provides a Packages index." = "Inserisci l'URL principale di un repository Sileo o Cydia che fornisce un indice Packages.";
+"Identifier" = "Identificatore";
+"Manage Sources" = "Gestisci sorgenti";
+"No injectable packages were found in this repository." = "Nessun pacchetto iniettabile trovato in questo repository.";
+"No Packages" = "Nessun pacchetto";
+"OK" = "OK";
+"Only .deb, .dylib, and .zip downloads can be injected." = "È possibile iniettare solo download .deb, .dylib e .zip.";
+"Refresh Sources" = "Aggiorna sorgenti";
+"Repository URL" = "URL repository";
+"Search Packages" = "Cerca pacchetti";
+"Source Name" = "Nome sorgente";
+"Sources" = "Sorgenti";
+"The downloaded file failed SHA-256 verification." = "Il file scaricato non ha superato la verifica SHA-256.";
+"The repository returned an invalid response." = "Il repository ha restituito una risposta non valida.";
+"Version" = "Versione";

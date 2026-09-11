@@ -17,7 +17,7 @@
 "Advertisement" = "广告";
 
 /* No comment provided by engineer. */
-"After the app upgrade, any injected plugins will be disabled. You will need to manually re-enable them." = "App 更新后，所有已注入的插件都会被禁用。你需要手动重新启用它们。";
+"After an app update, previously enabled plug-ins are restored automatically when TrollFools is opened." = "App 更新后，之前启用的插件会在打开 TrollFools 时自动恢复。";
 
 /* No comment provided by engineer. */
 "All" = "所有应用";
@@ -312,4 +312,29 @@
 
 "Automatically Reinject After App Updates" = "App 更新后自动重新注入";
 "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened." = "App 更新替换原安装包后，TrollFools 只会恢复更新前处于启用状态的插件。如果更新时 TrollFools 未运行，将在下次打开时恢复。";
+
+"Add" = "添加";
+"Add Source" = "添加软件源";
+"After downloading, select the app that should receive this plug-in." = "下载完成后，选择要注入此插件的 App。";
+"Architecture" = "架构";
+"Author" = "作者";
+"Description" = "描述";
+"Download and Inject" = "下载并注入";
+"Download Size" = "下载大小";
+"Enter a valid HTTPS repository URL." = "请输入有效的 HTTPS 软件源地址。";
+"Enter the root URL of a Sileo or Cydia repository that provides a Packages index." = "请输入提供 Packages 索引的 Sileo 或 Cydia 软件源根地址。";
+"Identifier" = "标识符";
+"Manage Sources" = "管理软件源";
+"No injectable packages were found in this repository." = "此软件源中没有找到可注入的软件包。";
+"No Packages" = "没有软件包";
+"OK" = "确定";
+"Only .deb, .dylib, and .zip downloads can be injected." = "只能注入 .deb、.dylib 和 .zip 下载文件。";
+"Refresh Sources" = "刷新软件源";
+"Repository URL" = "软件源地址";
+"Search Packages" = "搜索软件包";
+"Source Name" = "软件源名称";
+"Sources" = "软件源";
+"The downloaded file failed SHA-256 verification." = "下载文件未通过 SHA-256 校验。";
+"The repository returned an invalid response." = "软件源返回了无效响应。";
+"Version" = "版本";
 

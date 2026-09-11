@@ -17,7 +17,7 @@
 "Advertisement" = "Advertisement";
 
 /* No comment provided by engineer. */
-"After the app upgrade, any injected plugins will be disabled. You will need to manually re-enable them." = "After the app upgrade, any injected plugins will be disabled. You will need to manually re-enable them.";
+"After an app update, previously enabled plug-ins are restored automatically when TrollFools is opened." = "After an app update, previously enabled plug-ins are restored automatically when TrollFools is opened.";
 
 /* No comment provided by engineer. */
 "All" = "All";
@@ -312,4 +312,29 @@
 
 "Automatically Reinject After App Updates" = "Automatically Reinject After App Updates";
 "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened." = "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened.";
+
+"Add" = "Add";
+"Add Source" = "Add Source";
+"After downloading, select the app that should receive this plug-in." = "After downloading, select the app that should receive this plug-in.";
+"Architecture" = "Architecture";
+"Author" = "Author";
+"Description" = "Description";
+"Download and Inject" = "Download and Inject";
+"Download Size" = "Download Size";
+"Enter a valid HTTPS repository URL." = "Enter a valid HTTPS repository URL.";
+"Enter the root URL of a Sileo or Cydia repository that provides a Packages index." = "Enter the root URL of a Sileo or Cydia repository that provides a Packages index.";
+"Identifier" = "Identifier";
+"Manage Sources" = "Manage Sources";
+"No injectable packages were found in this repository." = "No injectable packages were found in this repository.";
+"No Packages" = "No Packages";
+"OK" = "OK";
+"Only .deb, .dylib, and .zip downloads can be injected." = "Only .deb, .dylib, and .zip downloads can be injected.";
+"Refresh Sources" = "Refresh Sources";
+"Repository URL" = "Repository URL";
+"Search Packages" = "Search Packages";
+"Source Name" = "Source Name";
+"Sources" = "Sources";
+"The downloaded file failed SHA-256 verification." = "The downloaded file failed SHA-256 verification.";
+"The repository returned an invalid response." = "The repository returned an invalid response.";
+"Version" = "Version";
 

@@ -1,5 +1,27 @@
 # Changelog
 
+## 4.3 Build 274 (2026-09-11)
+
+### 新增
+
+- 新增 Sileo/Cydia 软件源管理，默认添加 TrollStoreX 巨魔源。
+- 可直接下载软件源中的插件，随后自动打开 App 选择及快捷注入流程。
+- 软件源提供 SHA-256 时会校验下载文件，支持未压缩、BZip2 和 Gzip 软件包索引。
+- 首次升级到新版时，如果 App 已更新导致插件消失，会从已有持久化副本恢复旧插件。
+
+------
+
+## 4.3 Build 274 (2026-09-11) [EN]
+
+### Added
+
+- Added Sileo/Cydia repository management with TrollStoreX configured by default.
+- Repository plug-ins can be downloaded directly into the app selection and injection flow.
+- Downloads are SHA-256 verified when metadata is available; plain, BZip2, and Gzip package indexes are supported.
+- On first upgrade, legacy persistent plug-ins are restored when an app update has already removed them.
+
+------
+
 ## 4.3 Build 273 (2026-08-06)
 
 ### 调整

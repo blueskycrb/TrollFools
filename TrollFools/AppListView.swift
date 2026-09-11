@@ -19,7 +19,7 @@ struct AppListView: View {
     @EnvironmentObject var appList: AppListModel
     @Environment(\.verticalSizeClass) var verticalSizeClass
 
-    @State var selectorOpenedURL: URLIdentifiable? = nil
+    @State var activeSheet: AppListSheet? = nil
     @State var selectedIndex: String? = nil
 
     @State var isWarningPresented = false
@@ -61,12 +61,12 @@ struct AppListView: View {
                     presenting: temporaryOpenedURL
                 ) { result in
                     Button {
-                        selectorOpenedURL = result
+                        activeSheet = .selector(result)
                     } label: {
                         Text(NSLocalizedString("Continue", comment: ""))
                     }
                     Button(role: .destructive) {
-                        selectorOpenedURL = result
+                        activeSheet = .selector(result)
                         isWarningHidden = true
                     } label: {
                         Text(NSLocalizedString("Continue and Don’t Show Again", comment: ""))
@@ -88,9 +88,16 @@ struct AppListView: View {
     var content: some View {
         styledNavigationView
             .animation(.easeOut, value: appList.activeScopeApps.keys)
-            .sheet(item: $selectorOpenedURL) { urlWrapper in
-                AppListView()
-                    .environmentObject(AppListModel(selectorURL: urlWrapper.url))
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case let .selector(urlWrapper):
+                    AppListView()
+                        .environmentObject(AppListModel(selectorURL: urlWrapper.url))
+                case .repositories:
+                    RepoBrowserView { downloadedURL in
+                        activeSheet = .selector(URLIdentifiable(url: downloadedURL))
+                    }
+                }
             }
             .onOpenURL { url in
                 let ext = url.pathExtension.lowercased()
@@ -109,7 +116,7 @@ struct AppListView: View {
                     }
                 }
 
-                selectorOpenedURL = urlIdent
+                activeSheet = .selector(urlIdent)
             }
             .onAppear {
                 CheckUpdateManager.shared.checkUpdateIfNeeded { latestVersion, _ in
@@ -247,22 +254,36 @@ struct AppListView: View {
                     }
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                if !appList.isSelectorMode {
+                    Button {
+                        activeSheet = .repositories
+                    } label: {
+                        Image(systemName: "shippingbox")
+                    }
+                    .accessibilityLabel(NSLocalizedString("Sources", comment: ""))
+                }
+
                 Button {
                     appList.filter.showPatchedOnly.toggle()
                 } label: {
-                    if #available(iOS 15, *) {
-                        Image(systemName: appList.filter.showPatchedOnly
-                            ? "line.3.horizontal.decrease.circle.fill"
-                            : "line.3.horizontal.decrease.circle")
-                    } else {
-                        Image(systemName: appList.filter.showPatchedOnly
-                            ? "eject.circle.fill"
-                            : "eject.circle")
-                    }
+                    filterIcon
                 }
                 .accessibilityLabel(NSLocalizedString("Show Patched Only", comment: ""))
             }
+        }
+    }
+
+    @ViewBuilder
+    private var filterIcon: some View {
+        if #available(iOS 15, *) {
+            Image(systemName: appList.filter.showPatchedOnly
+                ? "line.3.horizontal.decrease.circle.fill"
+                : "line.3.horizontal.decrease.circle")
+        } else {
+            Image(systemName: appList.filter.showPatchedOnly
+                ? "eject.circle.fill"
+                : "eject.circle")
         }
     }
 
@@ -458,4 +479,18 @@ struct AppListView: View {
 struct URLIdentifiable: Identifiable {
     let url: URL
     var id: String { url.absoluteString }
+}
+
+enum AppListSheet: Identifiable {
+    case selector(URLIdentifiable)
+    case repositories
+
+    var id: String {
+        switch self {
+        case let .selector(urlWrapper):
+            return "selector-\(urlWrapper.id)"
+        case .repositories:
+            return "repositories"
+        }
+    }
 }
