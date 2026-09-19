@@ -145,17 +145,15 @@ private struct AddRepoSourceView: View {
                     .disabled(sourceURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-            .alert(
-                NSLocalizedString("Unable to Add Source", comment: ""),
-                isPresented: Binding(
-                    get: { error != nil },
-                    set: { if !$0 { error = nil } }
-                ),
-                presenting: error
-            ) { _ in
-                Button(NSLocalizedString("OK", comment: ""), role: .cancel) {}
-            } message: {
-                Text($0.localizedDescription)
+            .alert(isPresented: Binding(
+                get: { error != nil },
+                set: { if !$0 { error = nil } }
+            )) {
+                Alert(
+                    title: Text(NSLocalizedString("Unable to Add Source", comment: "")),
+                    message: Text(error?.localizedDescription ?? ""),
+                    dismissButton: .default(Text(NSLocalizedString("OK", comment: "")))
+                )
             }
         }
     }
@@ -392,17 +390,15 @@ private struct RepoPackageDetailView: View {
                     }
                 }
             }
-            .alert(
-                NSLocalizedString("Download Failed", comment: ""),
-                isPresented: Binding(
-                    get: { error != nil },
-                    set: { if !$0 { error = nil } }
-                ),
-                presenting: error
-            ) { _ in
-                Button(NSLocalizedString("OK", comment: ""), role: .cancel) {}
-            } message: {
-                Text($0.localizedDescription)
+            .alert(isPresented: Binding(
+                get: { error != nil },
+                set: { if !$0 { error = nil } }
+            )) {
+                Alert(
+                    title: Text(NSLocalizedString("Download Failed", comment: "")),
+                    message: Text(error?.localizedDescription ?? ""),
+                    dismissButton: .default(Text(NSLocalizedString("OK", comment: "")))
+                )
             }
             .sheet(item: $selectorURL) { url in
                 AppListView()
