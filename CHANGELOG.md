@@ -1,5 +1,19 @@
 # Changelog
 
+## 4.3 Build 275 (2026-09-19)
+
+### 紧急修复
+
+- 修复未注入或缺少 CydiaSubstrate 框架的 App 在启动 TrollFools 时触发崩溃的问题。
+
+------
+
+## 4.3 Build 275 (2026-09-19) [EN]
+
+### Emergency Fix
+
+- Fixed a crash when TrollFools scanned an unpatched app without CydiaSubstrate.
+
 ## 4.3 Build 274 (2026-09-19)
 
 ### 修复

@@ -67,7 +67,8 @@ extension InjectorV3 {
             let substrateURL = target
                 .appendingPathComponent("Frameworks", isDirectory: true)
                 .appendingPathComponent(Self.substrateFwkName, isDirectory: true)
-            guard let substrateMachO = try? locateExecutableInBundle(substrateURL),
+            guard checkIsBundle(substrateURL),
+                  let substrateMachO = try? locateExecutableInBundle(substrateURL),
                   isMachO(substrateMachO)
             else {
                 return false
@@ -380,7 +381,8 @@ extension InjectorV3 {
 
         let frameworksURL = target.appendingPathComponent("Frameworks")
         let substrateFwkURL = frameworksURL.appendingPathComponent(Self.substrateFwkName)
-        guard let substrateMachO = try? locateExecutableInBundle(substrateFwkURL),
+        guard checkIsBundle(substrateFwkURL),
+              let substrateMachO = try? locateExecutableInBundle(substrateFwkURL),
               isMachO(substrateMachO),
               !injectedAssetURLsInBundle(target).isEmpty
         else {
