@@ -119,6 +119,8 @@
 		CCF4705E2C4A464B008D8197 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CCF4705D2C4A464B008D8197 /* Assets.xcassets */; };
 		CCF470692C4A4919008D8197 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = CCF4706B2C4A4919008D8197 /* Localizable.strings */; };
 		CCF4706E2C4A4BAB008D8197 /* AppListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF4706D2C4A4BAB008D8197 /* AppListView.swift */; };
+		D0E000032F12345000112233 /* RepoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E000012F12345000112233 /* RepoService.swift */; };
+		D0E000042F12345000112233 /* RepoViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E000022F12345000112233 /* RepoViews.swift */; };
 		CCF470732C4A4E81008D8197 /* TrollFoolsStub.m in Sources */ = {isa = PBXBuildFile; fileRef = CCF470722C4A4E81008D8197 /* TrollFoolsStub.m */; };
 		CCF5A0A42C4D45160097D48D /* AuxiliaryExecute.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF5A0A32C4D45160097D48D /* AuxiliaryExecute.swift */; };
 		CCF5A0A62C4D45400097D48D /* AuxiliaryExecute+Spawn.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF5A0A52C4D45400097D48D /* AuxiliaryExecute+Spawn.swift */; };
@@ -231,6 +233,8 @@
 		CCF4706A2C4A4919008D8197 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		CCF4706C2C4A491B008D8197 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		CCF4706D2C4A4BAB008D8197 /* AppListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppListView.swift; sourceTree = "<group>"; };
+		D0E000012F12345000112233 /* RepoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepoService.swift; sourceTree = "<group>"; };
+		D0E000022F12345000112233 /* RepoViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepoViews.swift; sourceTree = "<group>"; };
 		CCF470712C4A4E81008D8197 /* TrollFools-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "TrollFools-Bridging-Header.h"; sourceTree = "<group>"; };
 		CCF470722C4A4E81008D8197 /* TrollFoolsStub.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TrollFoolsStub.m; sourceTree = "<group>"; };
 		CCF5A0A32C4D45160097D48D /* AuxiliaryExecute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuxiliaryExecute.swift; sourceTree = "<group>"; };
@@ -318,6 +322,7 @@
 				61743CD92D882CE40032696C /* PlaceholderView.swift */,
 				6124A07E2CD233BA00C52253 /* PlugInCell.swift */,
 				CC19E4BA2C561D7300E0F1B5 /* SettingsView.swift */,
+				D0E000022F12345000112233 /* RepoViews.swift */,
 				CC1548D22C4A743200A4173E /* SuccessView.swift */,
 			);
 			name = View;
@@ -340,6 +345,7 @@
 				CC80616B2E71632E00B1AA3E /* CheckUpdateManager.swift */,
 				CC80616C2E71632E00B1AA3E /* CodableStorage.swift */,
 				614C0C602D7C2EBE007E9184 /* Constants.swift */,
+				D0E000012F12345000112233 /* RepoService.swift */,
 				CC1548DA2C4A7C7000A4173E /* Execute.swift */,
 				61EFA3632D30267200159442 /* InjectorV3.swift */,
 				61EFA37A2D31165000159442 /* InjectorV3+Backup.swift */,
@@ -708,6 +714,8 @@
 				A6B7D8993C7E49B7A5C4A875 /* AutoReinjectManager.swift in Sources */,
 				CCB6A1192C4A58C7000D75B0 /* OptionView.swift in Sources */,
 				CCF4706E2C4A4BAB008D8197 /* AppListView.swift in Sources */,
+				D0E000032F12345000112233 /* RepoService.swift in Sources */,
+				D0E000042F12345000112233 /* RepoViews.swift in Sources */,
 				614C0C6C2D7D72D4007E9184 /* IndexableScroller.swift in Sources */,
 				CC1548D32C4A743200A4173E /* SuccessView.swift in Sources */,
 				CCF350A22D7DE50900826516 /* EjectListSearchModel.swift in Sources */,

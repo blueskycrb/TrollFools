@@ -34,6 +34,49 @@ extension InjectorV3 {
         !injectedAssetURLsInBundle(bundleURL).isEmpty
     }
 
+    func hasModifiedMachO(in target: URL) -> Bool {
+        modifiedMachOsInBundle(target).contains { hasAlternate($0) }
+    }
+
+    func isInjectionHealthy(in target: URL, expectedAssetNames: Set<String>) -> Bool {
+        guard checkIsBundle(target), !expectedAssetNames.isEmpty else {
+            return false
+        }
+
+        let injectedNames = Set(injectedAssetURLsInBundle(target).map(\.lastPathComponent))
+        guard expectedAssetNames.isSubset(of: injectedNames) else {
+            return false
+        }
+
+        let bundleNames = expectedAssetNames.filter { $0.lowercased().hasSuffix(".bundle") }
+        guard bundleNames.allSatisfy({
+            checkIsInjectedBundle(target.appendingPathComponent($0))
+        }) else {
+            return false
+        }
+
+        let loadCommandNames = injectedLoadCommandAssetNames(in: target)
+        let linkedAssetNames = expectedAssetNames.filter {
+            !$0.lowercased().hasSuffix(".bundle")
+        }
+        if !linkedAssetNames.isEmpty && !linkedAssetNames.isSubset(of: loadCommandNames) {
+            return false
+        }
+
+        if !linkedAssetNames.isEmpty {
+            let substrateURL = target
+                .appendingPathComponent("Frameworks", isDirectory: true)
+                .appendingPathComponent(Self.substrateFwkName, isDirectory: true)
+            guard let substrateMachO = try? locateExecutableInBundle(substrateURL),
+                  isMachO(substrateMachO)
+            else {
+                return false
+            }
+        }
+
+        return true
+    }
+
     // MARK: - Shared Methods
 
     func frameworkMachOsInBundle(_ target: URL) throws -> OrderedSet<URL> {
@@ -337,8 +380,62 @@ extension InjectorV3 {
 
         let frameworksURL = target.appendingPathComponent("Frameworks")
         let substrateFwkURL = frameworksURL.appendingPathComponent(Self.substrateFwkName)
+        guard let substrateMachO = try? locateExecutableInBundle(substrateFwkURL),
+              isMachO(substrateMachO),
+              !injectedAssetURLsInBundle(target).isEmpty
+        else {
+            return false
+        }
 
-        return FileManager.default.fileExists(atPath: substrateFwkURL.path)
+        return !injectedLoadCommandAssetNames(in: target).isEmpty
+            || injectedAssetURLsInBundle(target).contains { $0.pathExtension.lowercased() == "bundle" }
+    }
+
+    private func modifiedMachOsInBundle(_ target: URL) -> [URL] {
+        guard let executableURL = try? locateExecutableInBundle(target) else {
+            return []
+        }
+
+        var machOs = [executableURL]
+        let frameworksURL = target.appendingPathComponent("Frameworks", isDirectory: true)
+        if let enumerator = FileManager.default.enumerator(
+            at: frameworksURL,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) {
+            for case let itemURL as URL in enumerator where isMachO(itemURL) {
+                machOs.append(itemURL)
+            }
+        }
+        return machOs
+    }
+
+    private func injectedLoadCommandAssetNames(in target: URL) -> Set<String> {
+        var names = Set<String>()
+        for machO in modifiedMachOsInBundle(target) {
+            guard let current = try? Set(loadedDylibsOfMachO(machO)) else {
+                continue
+            }
+
+            let injected: Set<String>
+            if hasAlternate(machO),
+               let original = try? Set(loadedDylibsOfMachO(Self.alternateURL(for: machO)))
+            {
+                injected = current.subtracting(original)
+            } else {
+                injected = current
+            }
+
+            for loadCommand in injected {
+                let components = URL(fileURLWithPath: loadCommand).pathComponents
+                if let assetName = components.reversed().first(where: {
+                    $0.lowercased().hasSuffix(".framework") || $0.lowercased().hasSuffix(".dylib")
+                }) {
+                    names.insert(assetName)
+                }
+            }
+        }
+        return names
     }
 
     func checkIsInjectedBundle(_ target: URL) -> Bool {

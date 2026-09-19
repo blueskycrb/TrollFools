@@ -312,4 +312,29 @@
 
 "Automatically Reinject After App Updates" = "App 更新后自动重新注入";
 "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened." = "App 更新替换原安装包后，TrollFools 只会恢复更新前处于启用状态的插件。如果更新时 TrollFools 未运行，将在下次打开时恢复。";
+"Plugin Sources" = "插件源";
+"Add Source" = "添加插件源";
+"Source URL" = "源地址";
+"Enter the root URL of a Sileo/APT source." = "请输入 Sileo/APT 插件源的根地址。";
+"Sources use the standard Sileo/APT Packages format. Only packages compatible with TrollFools are shown." = "插件源使用标准的 Sileo/APT Packages 格式，只显示可供 TrollFools 使用的插件。";
+"The source URL is invalid." = "插件源地址无效。";
+"This source has already been added." = "这个插件源已经添加过了。";
+"The source returned an invalid response." = "插件源返回了无效响应。";
+"The source returned HTTP status %ld." = "插件源返回了 HTTP 状态码 %ld。";
+"The source package index could not be parsed." = "无法解析插件源的包索引。";
+"No compatible packages were found in this source." = "这个插件源中没有找到兼容的插件。";
+"The package exceeds the 100 MB download limit." = "插件包超过 100 MB 下载限制。";
+"The downloaded file is not a valid Debian package." = "下载的文件不是有效的 Debian 软件包。";
+"Unable to Add Source" = "无法添加插件源";
+"Unable to Load Source" = "无法加载插件源";
+"Try Again" = "重试";
+"No Packages" = "没有找到插件";
+"Other" = "其他";
+"Search Packages" = "搜索插件";
+"Refresh" = "刷新";
+"Package Details" = "插件详情";
+"Download and Select App" = "下载并选择应用";
+"Download Failed" = "下载失败";
+"Add" = "添加";
+"OK" = "确定";
 

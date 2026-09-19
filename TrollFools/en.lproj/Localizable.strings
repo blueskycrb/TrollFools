@@ -312,4 +312,29 @@
 
 "Automatically Reinject After App Updates" = "Automatically Reinject After App Updates";
 "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened." = "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened.";
+"Plugin Sources" = "Plugin Sources";
+"Add Source" = "Add Source";
+"Source URL" = "Source URL";
+"Enter the root URL of a Sileo/APT source." = "Enter the root URL of a Sileo/APT source.";
+"Sources use the standard Sileo/APT Packages format. Only packages compatible with TrollFools are shown." = "Sources use the standard Sileo/APT Packages format. Only packages compatible with TrollFools are shown.";
+"The source URL is invalid." = "The source URL is invalid.";
+"This source has already been added." = "This source has already been added.";
+"The source returned an invalid response." = "The source returned an invalid response.";
+"The source returned HTTP status %ld." = "The source returned HTTP status %ld.";
+"The source package index could not be parsed." = "The source package index could not be parsed.";
+"No compatible packages were found in this source." = "No compatible packages were found in this source.";
+"The package exceeds the 100 MB download limit." = "The package exceeds the 100 MB download limit.";
+"The downloaded file is not a valid Debian package." = "The downloaded file is not a valid Debian package.";
+"Unable to Add Source" = "Unable to Add Source";
+"Unable to Load Source" = "Unable to Load Source";
+"Try Again" = "Try Again";
+"No Packages" = "No Packages";
+"Other" = "Other";
+"Search Packages" = "Search Packages";
+"Refresh" = "Refresh";
+"Package Details" = "Package Details";
+"Download and Select App" = "Download and Select App";
+"Download Failed" = "Download Failed";
+"Add" = "Add";
+"OK" = "OK";
 

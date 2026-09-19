@@ -108,14 +108,8 @@ final class AutoReinjectManager {
         )
         guard !desiredNames.isEmpty else { return }
 
-        let injectedNames = Set(
-            InjectorV3.main
-                .injectedAssetURLsInBundle(bundleURL)
-                .map(\.lastPathComponent)
-        )
-        let missingNames = desiredNames.subtracting(injectedNames)
-
-        guard !missingNames.isEmpty else {
+        let injector = try InjectorV3(bundleURL)
+        if injector.isInjectionHealthy(in: bundleURL, expectedAssetNames: desiredNames) {
             AutoInjectionStore.shared.recordSuccessfulReinjection(
                 bundleIdentifier: bundleIdentifier,
                 bundleURL: bundleURL,
@@ -124,14 +118,20 @@ final class AutoReinjectManager {
             return
         }
 
+        DDLogWarn(
+            "Injection integrity check failed for \(bundleIdentifier); rebuilding enabled plug-ins",
+            ddlog: InjectorV3.main.logger
+        )
+
         let persistedURLs = InjectorV3.main.persistedAssetURLs(bid: bundleIdentifier)
         let persistedByName = Dictionary(
             uniqueKeysWithValues: persistedURLs.map { ($0.lastPathComponent, $0) }
         )
-        let missingURLs = missingNames.compactMap { persistedByName[$0] }
+        let persistedNames = Set(persistedByName.keys)
+        let desiredURLs = desiredNames.compactMap { persistedByName[$0] }
 
-        guard missingURLs.count == missingNames.count else {
-            let unavailableNames = missingNames
+        guard desiredURLs.count == desiredNames.count else {
+            let unavailableNames = desiredNames
                 .filter { persistedByName[$0] == nil }
                 .sorted()
                 .joined(separator: ", ")
@@ -144,7 +144,6 @@ final class AutoReinjectManager {
             )
         }
 
-        let injector = try InjectorV3(bundleURL)
         if injector.appID.isEmpty {
             injector.appID = bundleIdentifier
         }
@@ -157,20 +156,20 @@ final class AutoReinjectManager {
         injector.useFrameworkEnumerationFallback = profile.useFrameworkEnumerationFallback
         injector.injectStrategy = InjectorV3.Strategy(rawValue: profile.injectStrategy) ?? .lexicographic
 
-        try injector.inject(missingURLs, shouldPersist: false)
+        let existingURLs = injector.injectedAssetURLsInBundle(bundleURL)
+            .filter { persistedNames.contains($0.lastPathComponent) }
+        if !existingURLs.isEmpty && injector.hasModifiedMachO(in: bundleURL) {
+            try injector.eject(existingURLs, shouldDesist: false)
+        }
 
-        let reinjectedNames = Set(
-            InjectorV3.main
-                .injectedAssetURLsInBundle(bundleURL)
-                .map(\.lastPathComponent)
-        )
-        let remainingNames = desiredNames.subtracting(reinjectedNames)
-        guard remainingNames.isEmpty else {
+        try injector.inject(desiredURLs, shouldPersist: false)
+
+        guard injector.isInjectionHealthy(in: bundleURL, expectedAssetNames: desiredNames) else {
             throw NSError(
                 domain: Constants.gErrorDomain,
                 code: 1002,
                 userInfo: [
-                    NSLocalizedDescriptionKey: "Automatic reinjection verification failed: \(remainingNames.sorted().joined(separator: ", "))",
+                    NSLocalizedDescriptionKey: "Automatic reinjection verification failed.",
                 ]
             )
         }

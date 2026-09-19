@@ -26,6 +26,7 @@ struct AppListView: View {
     @State var temporaryOpenedURL: URLIdentifiable? = nil
 
     @State var latestVersionString: String?
+    @State var isRepoSourcesPresented = false
 
     @AppStorage("isWarningHidden")
     var isWarningHidden: Bool = false
@@ -91,6 +92,9 @@ struct AppListView: View {
             .sheet(item: $selectorOpenedURL) { urlWrapper in
                 AppListView()
                     .environmentObject(AppListModel(selectorURL: urlWrapper.url))
+            }
+            .sheet(isPresented: $isRepoSourcesPresented) {
+                RepoSourcesView()
             }
             .onOpenURL { url in
                 let ext = url.pathExtension.lowercased()
@@ -247,7 +251,16 @@ struct AppListView: View {
                     }
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                if !appList.isSelectorMode {
+                    Button {
+                        isRepoSourcesPresented = true
+                    } label: {
+                        Image(systemName: "shippingbox")
+                    }
+                    .accessibilityLabel(NSLocalizedString("Plugin Sources", comment: ""))
+                }
+
                 Button {
                     appList.filter.showPatchedOnly.toggle()
                 } label: {
