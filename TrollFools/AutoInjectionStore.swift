@@ -86,10 +86,14 @@ final class AutoInjectionStore {
             let injectedNames = Set(injectedURLs.map(\.lastPathComponent))
             let persistedNames = Set(persistedURLs.map(\.lastPathComponent))
             let availableNames = injectedNames.union(persistedNames)
+            let shouldRestoreLegacyPersistedPlugins = existingProfile == nil
+                && injectedNames.isEmpty
+                && !persistedNames.isEmpty
 
             // Existing state wins when an update has replaced the app bundle. Assets currently
-            // present in the app are always considered enabled; newly discovered persisted-only
-            // assets start disabled because their previous state is unknown.
+            // present in the app are always considered enabled. When migrating from a version
+            // without profiles, a fully replaced app has no injected assets but still has its
+            // persisted copies, so restore those copies on the first reconciliation.
             profile.plugins.removeAll { !availableNames.contains($0.fileName) }
 
             for name in availableNames.sorted() {
@@ -100,7 +104,7 @@ final class AutoInjectionStore {
                 } else {
                     profile.plugins.append(AutoInjectionPluginState(
                         fileName: name,
-                        enabled: injectedNames.contains(name)
+                        enabled: injectedNames.contains(name) || shouldRestoreLegacyPersistedPlugins
                     ))
                 }
             }

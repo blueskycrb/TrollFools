@@ -17,7 +17,7 @@
 "Advertisement" = "Quảng Cáo";
 
 /* No comment provided by engineer. */
-"After the app upgrade, any injected plugins will be disabled. You will need to manually re-enable them." = "Sau khi nâng cấp ứng dụng, bất kỳ plugin nào đã được tiêm sẽ bị vô hiệu hóa. Bạn sẽ cần phải kích hoạt lại chúng một cách thủ công.";
+"After an app update, previously enabled plug-ins are restored automatically when TrollFools is opened." = "Sau khi ứng dụng cập nhật, các plug-in đã bật trước đó sẽ tự động được khôi phục khi mở TrollFools.";
 
 /* No comment provided by engineer. */
 "All" = "Tất cả";
@@ -312,3 +312,28 @@
 
 "Automatically Reinject After App Updates" = "Tự động chèn lại sau khi ứng dụng cập nhật";
 "When the app is replaced by an update, TrollFools restores only the plug-ins that were enabled before the update. If TrollFools was not running, restoration occurs the next time it is opened." = "Khi bản cập nhật thay thế ứng dụng, TrollFools chỉ khôi phục các tiện ích đã được bật. Nếu TrollFools không chạy, việc khôi phục sẽ diễn ra ở lần mở tiếp theo.";
+
+"Add" = "Thêm";
+"Add Source" = "Thêm nguồn";
+"After downloading, select the app that should receive this plug-in." = "Sau khi tải xuống, hãy chọn ứng dụng cần tiêm plug-in này.";
+"Architecture" = "Kiến trúc";
+"Author" = "Tác giả";
+"Description" = "Mô tả";
+"Download and Inject" = "Tải xuống và tiêm";
+"Download Size" = "Kích thước tải xuống";
+"Enter a valid HTTPS repository URL." = "Nhập URL kho HTTPS hợp lệ.";
+"Enter the root URL of a Sileo or Cydia repository that provides a Packages index." = "Nhập URL gốc của kho Sileo hoặc Cydia có chỉ mục Packages.";
+"Identifier" = "Định danh";
+"Manage Sources" = "Quản lý nguồn";
+"No injectable packages were found in this repository." = "Không tìm thấy gói có thể tiêm trong kho này.";
+"No Packages" = "Không có gói";
+"OK" = "OK";
+"Only .deb, .dylib, and .zip downloads can be injected." = "Chỉ có thể tiêm các tệp tải xuống .deb, .dylib và .zip.";
+"Refresh Sources" = "Làm mới nguồn";
+"Repository URL" = "URL kho";
+"Search Packages" = "Tìm kiếm gói";
+"Source Name" = "Tên nguồn";
+"Sources" = "Nguồn";
+"The downloaded file failed SHA-256 verification." = "Tệp đã tải xuống không vượt qua xác minh SHA-256.";
+"The repository returned an invalid response." = "Kho đã trả về phản hồi không hợp lệ.";
+"Version" = "Phiên bản";

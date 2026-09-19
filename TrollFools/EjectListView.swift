@@ -151,7 +151,7 @@ struct EjectListView: View {
                     ? NSLocalizedString("No Injected Plug-Ins", comment: "")
                     : NSLocalizedString("Injected Plug-Ins", comment: ""))
             } footer: {
-                paddedHeaderFooterText(NSLocalizedString("After the app upgrade, any injected plugins will be disabled. You will need to manually re-enable them.", comment: ""))
+                paddedHeaderFooterText(NSLocalizedString("After an app update, previously enabled plug-ins are restored automatically when TrollFools is opened.", comment: ""))
             }
 
             Section {

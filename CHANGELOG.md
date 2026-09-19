@@ -7,6 +7,7 @@
 - 修复插件文件仍在但 Mach-O 加载命令或 CydiaSubstrate 框架失效时，自动恢复误判为成功的问题。
 - 自动恢复现在会校验注入完整性，必要时先清理残留注入并重新注入已启用插件。
 - 修复插件源页面编译依赖，并确保内置 TrollStoreX 源不会被删除。
+- 新增旧版持久化插件配置迁移，首次升级后可继续恢复已启用插件。
 
 ------
 
@@ -17,6 +18,7 @@
 - Fixed automatic restoration incorrectly treating stale plug-in files as a healthy injection when Mach-O load commands or CydiaSubstrate were missing.
 - Automatic restoration now verifies injection integrity and rebuilds the injection when necessary.
 - Fixed the plug-in source page dependencies and protected the built-in TrollStoreX source from deletion.
+- Added migration for legacy persistent plug-in profiles during the first upgrade.
 
 ## 4.3 Build 273 (2026-08-06)
 
