@@ -33,7 +33,7 @@ extension InjectorV3 {
             didUseMachOEnumerationFallback = false
             let preparedAssetURLs = try preprocessAssets(assetURLs)
 
-            precondition(!preparedAssetURLs.isEmpty, "No asset to inject.")
+            try ensure(!preparedAssetURLs.isEmpty, "No asset to inject.")
             terminateApp()
 
             try injectBundles(preparedAssetURLs
@@ -155,14 +155,14 @@ extension InjectorV3 {
         var name = "@rpath/"
 
         if checkIsBundle(assetURL) {
-            precondition(assetURL.pathExtension == "framework", "Invalid framework: \(assetURL.path)")
+            try ensure(assetURL.pathExtension == "framework", "Invalid framework: \(assetURL.path)")
             let machO = try locateExecutableInBundle(assetURL)
             name += machO.pathComponents.suffix(2).joined(separator: "/") // @rpath/XXX.framework/XXX
-            precondition(name.contains(".framework/"), "Invalid framework name: \(name)")
+            try ensure(name.contains(".framework/"), "Invalid framework name: \(name)")
         } else {
-            precondition(assetURL.pathExtension == "dylib", "Invalid dylib: \(assetURL.path)")
+            try ensure(assetURL.pathExtension == "dylib", "Invalid dylib: \(assetURL.path)")
             name += assetURL.lastPathComponent
-            precondition(name.hasSuffix(".dylib"), "Invalid dylib name: \(name)") // @rpath/XXX.dylib
+            try ensure(name.hasSuffix(".dylib"), "Invalid dylib name: \(name)") // @rpath/XXX.dylib
         }
 
         return name
@@ -177,7 +177,7 @@ extension InjectorV3 {
     }
 
     fileprivate func standardizeLoadCommandDylib(_ target: URL, to name: String) throws {
-        precondition(name.hasPrefix("@rpath/"), "Invalid dylib name: \(name)")
+        try ensure(name.hasPrefix("@rpath/"), "Invalid dylib name: \(name)")
 
         let itemName = String(name[name.index(name.startIndex, offsetBy: 7)...])
         let dylibs = try loadedDylibsOfMachO(target)

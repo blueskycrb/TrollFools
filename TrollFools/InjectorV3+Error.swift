@@ -17,4 +17,16 @@ extension InjectorV3 {
             }
         }
     }
+
+    /// Throwing replacement for `precondition`. Preconditions also trap in release builds,
+    /// which crashed the app when automatic reinjection inspected a bundle that
+    /// LaunchServices was still replacing. A thrown error is retried instead.
+    func ensure(
+        _ condition: @autoclosure () -> Bool,
+        _ message: @autoclosure () -> String
+    ) throws {
+        guard condition() else {
+            throw Error.generic(message())
+        }
+    }
 }
