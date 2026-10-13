@@ -29,7 +29,7 @@ extension InjectorV3 {
 
     func eject(_ assetURLs: [URL], shouldDesist: Bool) throws {
         try withOperationLock {
-            precondition(!assetURLs.isEmpty, "No asset to eject.")
+            try ensure(!assetURLs.isEmpty, "No asset to eject.")
             terminateApp()
 
             if shouldDesist {

@@ -21,14 +21,51 @@ final class InjectorV3 {
 
     static let main = try! InjectorV3(Bundle.main.bundleURL)
 
-    // The manual injection UI and automatic reinjection run on different queues.
-    // Modifying the same application bundle concurrently can corrupt an operation
-    // or make both operations fail. Serialize every inject/eject action.
+    // The manual injection UI, automatic reinjection and `trollfoolscli` (spawned by the
+    // TrollStore integration) can all modify the same application bundle. Modifying a
+    // bundle concurrently can corrupt an operation or make both operations fail, so every
+    // inject/eject action is serialized within the process (NSRecursiveLock) and across
+    // processes (flock on a shared lock file).
     private static let operationLock = NSRecursiveLock()
+    private static var operationLockDepth = 0
+
+    static let operationLockFileURL = URL(
+        fileURLWithPath: "/var/mobile/Library/TrollFools/.operation.lock"
+    )
+
+    private static let operationLockFD: Int32 = {
+        let directoryURL = operationLockFileURL.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        // A read-only descriptor is sufficient for flock(2) and still works when the lock
+        // file was created by another user (root CLI vs. mobile app).
+        let fd = open(operationLockFileURL.path, O_CREAT | O_RDONLY | O_CLOEXEC, 0o666)
+        if fd >= 0 {
+            _ = fchmod(fd, 0o666)
+        } else {
+            DDLogError("Unable to open operation lock file: \(String(cString: strerror(errno)))")
+        }
+        return fd
+    }()
 
     func withOperationLock<T>(_ body: () throws -> T) rethrows -> T {
         Self.operationLock.lock()
         defer { Self.operationLock.unlock() }
+
+        // flock(2) is not reentrant per descriptor: unlocking in a nested call would
+        // release the outer lock. Only the outermost call takes and releases it.
+        let fd = Self.operationLockFD
+        let isOutermost = Self.operationLockDepth == 0
+        if isOutermost, fd >= 0 {
+            while flock(fd, LOCK_EX) != 0 && errno == EINTR {}
+        }
+        Self.operationLockDepth += 1
+        defer {
+            Self.operationLockDepth -= 1
+            if isOutermost, fd >= 0 {
+                flock(fd, LOCK_UN)
+            }
+        }
+
         return try body()
     }
 

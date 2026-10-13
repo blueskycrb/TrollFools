@@ -18,41 +18,91 @@ final class AutoReinjectManager {
     private var pendingWorkItems = [DispatchWorkItem]()
     private var processingBundleIdentifiers = Set<String>()
 
+    /// Incremented every time a new reconciliation cycle is scheduled. Retries that belong
+    /// to an older cycle see a stale generation and stop, so only one retry chain is alive.
+    private var generation = 0
+    private var remainingProbes = 0
+    private static let retryDelays: [TimeInterval] = [15, 30]
+
     private init() {}
 
     func schedule(after delay: TimeInterval = 0.5) {
         queue.async { [weak self] in
             guard let self else { return }
 
-            self.pendingWorkItems.forEach { $0.cancel() }
-            self.pendingWorkItems.removeAll()
+            self.cancelPendingWork()
+            self.generation += 1
+            let generation = self.generation
 
-            // Give LaunchServices time to finish replacing an application bundle.
+            // Give LaunchServices time to finish replacing an application bundle by probing
+            // several times. Rescheduling cancels every probe and retry of the previous cycle.
             let delays = Array(Set([
                 delay,
                 max(delay, 1),
                 max(delay, 3),
                 max(delay, 8),
             ])).sorted()
+            self.remainingProbes = delays.count
             for reinjectDelay in delays {
-                let workItem = DispatchWorkItem { [weak self] in
-                    self?.reconcileAll(attempt: 0)
+                self.enqueue(after: reinjectDelay) { [weak self] in
+                    self?.runProbe(generation: generation)
                 }
-                self.pendingWorkItems.append(workItem)
-                self.queue.asyncAfter(deadline: .now() + reinjectDelay, execute: workItem)
             }
         }
     }
 
     func reconcileNow(completion: @escaping ([String]) -> Void) {
         queue.async { [weak self] in
-            completion(self?.reconcileAll(attempt: 0) ?? [])
+            completion(self?.reconcileAll() ?? [])
+        }
+    }
+
+    private func enqueue(after delay: TimeInterval, _ block: @escaping () -> Void) {
+        let workItem = DispatchWorkItem(block: block)
+        pendingWorkItems.append(workItem)
+        queue.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
+
+    private func cancelPendingWork() {
+        pendingWorkItems.forEach { $0.cancel() }
+        pendingWorkItems.removeAll()
+    }
+
+    private func runProbe(generation: Int) {
+        guard generation == self.generation else { return }
+        pendingWorkItems.removeAll { $0.isCancelled }
+        remainingProbes -= 1
+
+        // A healthy result does not end the cycle: an early probe may still see the old
+        // bundle before LaunchServices replaces it, so every probe runs.
+        let failures = reconcileAll()
+        guard !failures.isEmpty else { return }
+
+        // Later probes act as retries while LaunchServices may still be replacing a bundle.
+        // Start the slower retry chain only after the last probe has failed.
+        if remainingProbes == 0 {
+            scheduleRetry(generation: generation, attempt: 0)
+        }
+    }
+
+    private func runRetry(generation: Int, attempt: Int) {
+        guard generation == self.generation else { return }
+        pendingWorkItems.removeAll { $0.isCancelled }
+
+        if !reconcileAll().isEmpty {
+            scheduleRetry(generation: generation, attempt: attempt + 1)
+        }
+    }
+
+    private func scheduleRetry(generation: Int, attempt: Int) {
+        guard attempt < Self.retryDelays.count else { return }
+        enqueue(after: Self.retryDelays[attempt]) { [weak self] in
+            self?.runRetry(generation: generation, attempt: attempt)
         }
     }
 
     @discardableResult
-    private func reconcileAll(attempt: Int) -> [String] {
-        var shouldRetry = false
+    private func reconcileAll() -> [String] {
         var failures = [String]()
 
         for profile in AutoInjectionStore.shared.allProfiles()
@@ -62,7 +112,6 @@ final class AutoReinjectManager {
                 do {
                     try reconcile(profile)
                 } catch {
-                    shouldRetry = true
                     failures.append("\(profile.bundleIdentifier): \(error.localizedDescription)")
                     AutoInjectionStore.shared.recordError(
                         bundleIdentifier: profile.bundleIdentifier,
@@ -73,13 +122,6 @@ final class AutoReinjectManager {
                         ddlog: InjectorV3.main.logger
                     )
                 }
-            }
-        }
-
-        if shouldRetry, attempt < 2 {
-            let retryDelay: TimeInterval = attempt == 0 ? 15 : 30
-            queue.asyncAfter(deadline: .now() + retryDelay) { [weak self] in
-                self?.reconcileAll(attempt: attempt + 1)
             }
         }
 
@@ -109,6 +151,27 @@ final class AutoReinjectManager {
         guard !desiredNames.isEmpty else { return }
 
         let injector = try InjectorV3(bundleURL)
+        // Hold the operation lock across check, eject, inject and verify so that another
+        // process (the TrollStore integration's CLI) cannot interleave with this rebuild.
+        try injector.withOperationLock {
+            try reconcileLocked(
+                profile,
+                injector: injector,
+                proxy: proxy,
+                bundleURL: bundleURL,
+                desiredNames: desiredNames
+            )
+        }
+    }
+
+    private func reconcileLocked(
+        _ profile: AutoInjectionProfile,
+        injector: InjectorV3,
+        proxy: LSApplicationProxy,
+        bundleURL: URL,
+        desiredNames: Set<String>
+    ) throws {
+        let bundleIdentifier = profile.bundleIdentifier
         if injector.isInjectionHealthy(in: bundleURL, expectedAssetNames: desiredNames) {
             AutoInjectionStore.shared.recordSuccessfulReinjection(
                 bundleIdentifier: bundleIdentifier,

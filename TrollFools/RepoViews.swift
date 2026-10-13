@@ -127,7 +127,13 @@ private struct AddRepoSourceView: View {
                 } header: {
                     Text(NSLocalizedString("Source URL", comment: ""))
                 } footer: {
-                    Text(NSLocalizedString("Enter the root URL of a Sileo/APT source.", comment: ""))
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(NSLocalizedString("Enter the root URL of a Sileo/APT source.", comment: ""))
+                        if isInsecureURL {
+                            Text(NSLocalizedString("HTTP sources are not encrypted. Packages from this source can only be downloaded when it publishes a SHA256 checksum for them.", comment: ""))
+                                .foregroundColor(.orange)
+                        }
+                    }
                 }
             }
             .navigationTitle(NSLocalizedString("Add Source", comment: ""))
@@ -156,6 +162,13 @@ private struct AddRepoSourceView: View {
                 )
             }
         }
+    }
+
+    private var isInsecureURL: Bool {
+        sourceURL
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .hasPrefix("http://")
     }
 
     private func addSource() {
@@ -326,6 +339,7 @@ private struct RepoPackageDetailView: View {
     @State private var isDownloading = false
     @State private var error: Error?
     @State private var selectorURL: URLIdentifiable?
+    @State private var downloadedURL: URL?
 
     var body: some View {
         NavigationView {
@@ -400,7 +414,12 @@ private struct RepoPackageDetailView: View {
                     dismissButton: .default(Text(NSLocalizedString("OK", comment: "")))
                 )
             }
-            .sheet(item: $selectorURL) { url in
+            .sheet(item: $selectorURL, onDismiss: {
+                if let url = downloadedURL {
+                    RepoPackageDownloader.removeDownload(at: url)
+                    downloadedURL = nil
+                }
+            }) { url in
                 AppListView()
                     .environmentObject(AppListModel(selectorURL: url.url))
             }
@@ -431,6 +450,7 @@ private struct RepoPackageDetailView: View {
             isDownloading = false
             switch result {
             case let .success(url):
+                downloadedURL = url
                 selectorURL = URLIdentifiable(url: url)
             case let .failure(error):
                 self.error = error

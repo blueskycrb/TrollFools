@@ -81,10 +81,10 @@ extension InjectorV3 {
     // MARK: - Shared Methods
 
     func frameworkMachOsInBundle(_ target: URL) throws -> OrderedSet<URL> {
-        precondition(checkIsBundle(target), "Not a bundle: \(target.path)")
+        try ensure(checkIsBundle(target), "Not a bundle: \(target.path)")
 
         let executableURL = try locateExecutableInBundle(target)
-        precondition(isMachO(executableURL), "Not a Mach-O: \(executableURL.path)")
+        try ensure(isMachO(executableURL), "Not a Mach-O: \(executableURL.path)")
 
         let frameworksURL = target.appendingPathComponent("Frameworks")
         let frameworksExist = FileManager.default.fileExists(atPath: frameworksURL.path)
@@ -227,7 +227,7 @@ extension InjectorV3 {
     }
 
     fileprivate func injectedBundleURLsInBundle(_ target: URL) -> [URL] {
-        precondition(checkIsBundle(target), "Not a bundle: \(target.path)")
+        guard checkIsBundle(target) else { return [] }
 
         guard let bundleContentURLs = try? FileManager.default.contentsOfDirectory(at: target, includingPropertiesForKeys: [.isDirectoryKey]) else {
             return []
@@ -250,7 +250,7 @@ extension InjectorV3 {
     }
 
     fileprivate func injectedDylibAndFrameworkURLsInBundle(_ target: URL) -> [URL] {
-        precondition(checkIsBundle(target), "Not a bundle: \(target.path)")
+        guard checkIsBundle(target) else { return [] }
 
         let frameworksURL = target.appendingPathComponent("Frameworks")
         guard let frameworksContentURLs = try? FileManager.default.contentsOfDirectory(at: frameworksURL, includingPropertiesForKeys: nil) else {
@@ -283,7 +283,7 @@ extension InjectorV3 {
 
     func markBundlesAsInjected(_ bundleURLs: [URL], privileged: Bool) throws {
         let filteredURLs = bundleURLs.filter { checkIsBundle($0) }
-        precondition(filteredURLs.count == bundleURLs.count, "Not all urls are bundles")
+        try ensure(filteredURLs.count == bundleURLs.count, "Not all urls are bundles")
 
         if privileged {
             let markerURL = temporaryDirectoryURL.appendingPathComponent(Self.injectedMarkerName)
@@ -306,7 +306,7 @@ extension InjectorV3 {
     }
 
     func identifierOfBundle(_ target: URL) throws -> String {
-        precondition(checkIsBundle(target), "Not a bundle: \(target.path)")
+        try ensure(checkIsBundle(target), "Not a bundle: \(target.path)")
 
         if let bundleIdentifier = Bundle(url: target)?.bundleIdentifier {
             return bundleIdentifier
@@ -328,7 +328,7 @@ extension InjectorV3 {
     }
 
     func locateFrameworksDirectoryInBundle(_ target: URL) throws -> URL {
-        precondition(checkIsBundle(target), "Not a bundle: \(target.path)")
+        try ensure(checkIsBundle(target), "Not a bundle: \(target.path)")
 
         let frameworksDirectoryURL = target.appendingPathComponent("Frameworks")
         if !FileManager.default.fileExists(atPath: frameworksDirectoryURL.path) {
@@ -339,7 +339,7 @@ extension InjectorV3 {
     }
 
     func locateExecutableInBundle(_ target: URL) throws -> URL {
-        precondition(checkIsBundle(target), "Not a bundle: \(target.path)")
+        try ensure(checkIsBundle(target), "Not a bundle: \(target.path)")
 
         if let executableURL = Bundle(url: target)?.executableURL {
             return executableURL

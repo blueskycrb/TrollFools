@@ -5,6 +5,7 @@
 //  Created by Codex on 2026/7/10.
 //
 
+import CocoaLumberjackSwift
 import Foundation
 
 final class AutoInjectionStore {
@@ -42,14 +43,14 @@ final class AutoInjectionStore {
 
             return urls
                 .filter { $0.pathExtension.lowercased() == "json" }
-                .compactMap { try? loadProfileUnlocked(at: $0) }
+                .compactMap { try? loadUnlocked(at: $0) }
                 .sorted { $0.bundleIdentifier < $1.bundleIdentifier }
         }
     }
 
     func profile(for bundleIdentifier: String) -> AutoInjectionProfile? {
         withLock {
-            try? loadProfileUnlocked(bundleIdentifier: bundleIdentifier)
+            try? loadUnlocked(at: profileURL(bundleIdentifier: bundleIdentifier))
         }
     }
 
@@ -65,7 +66,13 @@ final class AutoInjectionStore {
         persistedURLs: [URL]
     ) {
         withLock {
-            let existingProfile = try? loadProfileUnlocked(bundleIdentifier: bundleIdentifier)
+            let existingProfile: AutoInjectionProfile?
+            do {
+                existingProfile = try loadUnlocked(at: profileURL(bundleIdentifier: bundleIdentifier))
+            } catch {
+                DDLogError("Unable to read profile for \(bundleIdentifier), skipping bootstrap: \(error)")
+                return
+            }
             var profile = existingProfile ?? AutoInjectionProfile(bundleIdentifier: bundleIdentifier)
             let defaults = UserDefaults.standard
             if let value = defaults.object(forKey: "UseWeakReference-\(bundleIdentifier)") as? Bool {
@@ -223,8 +230,14 @@ final class AutoInjectionStore {
         mutation: (inout AutoInjectionProfile) -> Void
     ) {
         withLock {
-            var profile = (try? loadProfileUnlocked(bundleIdentifier: bundleIdentifier))
-                ?? AutoInjectionProfile(bundleIdentifier: bundleIdentifier)
+            var profile: AutoInjectionProfile
+            do {
+                profile = try loadUnlocked(at: profileURL(bundleIdentifier: bundleIdentifier))
+                    ?? AutoInjectionProfile(bundleIdentifier: bundleIdentifier)
+            } catch {
+                DDLogError("Unable to read profile for \(bundleIdentifier), not updating it: \(error)")
+                return
+            }
             mutation(&profile)
             try? saveProfileUnlocked(profile)
         }
@@ -236,16 +249,38 @@ final class AutoInjectionStore {
             .appendingPathExtension("json")
     }
 
-    private func loadProfileUnlocked(bundleIdentifier: String) throws -> AutoInjectionProfile {
-        try loadProfileUnlocked(at: profileURL(bundleIdentifier: bundleIdentifier))
-    }
+    /// Returns the stored profile, or nil when none exists.
+    ///
+    /// A profile that exists but cannot be decoded is moved aside instead of being silently
+    /// replaced by an empty one on the next write, so the user's plug-in list can still be
+    /// recovered by hand. A file that cannot be read at all (for example a permission
+    /// problem) is left untouched and the error is thrown, so callers do not overwrite it.
+    private func loadUnlocked(at url: URL) throws -> AutoInjectionProfile? {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return nil
+        }
 
-    private func loadProfileUnlocked(at url: URL) throws -> AutoInjectionProfile {
         let data = try Data(contentsOf: url)
-        return try decoder.decode(AutoInjectionProfile.self, from: data)
+        do {
+            return try decoder.decode(AutoInjectionProfile.self, from: data)
+        } catch {
+            let timestamp = Int(Date().timeIntervalSince1970)
+            let quarantineURL = url.appendingPathExtension("corrupt-\(timestamp)")
+            do {
+                try FileManager.default.moveItem(at: url, to: quarantineURL)
+                DDLogError("Moved undecodable profile \(url.lastPathComponent) aside: \(error)")
+            } catch let moveError {
+                DDLogError("Unable to quarantine profile \(url.lastPathComponent): \(moveError)")
+                throw moveError
+            }
+            return nil
+        }
     }
 
     private func saveProfileUnlocked(_ profile: AutoInjectionProfile) throws {
+        var profile = profile
+        profile.schemaVersion = AutoInjectionProfile.currentSchemaVersion
+
         try FileManager.default.createDirectory(
             at: Self.profilesRootURL,
             withIntermediateDirectories: true

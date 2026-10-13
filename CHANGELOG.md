@@ -1,5 +1,41 @@
 # Changelog
 
+## 4.3 Build 276 (2026-10-13)
+
+### 稳定性修复
+
+- 修复 TrollFools 与 TrollStore 集成的命令行工具同时修改同一个 App 时可能损坏注入的问题，注入和移除操作现在会跨进程加锁。
+- 修复 App 更新后自动恢复时，安装包尚未替换完成就被检查而导致 TrollFools 崩溃的问题。
+- 修复自动恢复失败后重试无法取消、一次切换前台最多重复执行十余次的问题。
+- 自动恢复配置文件现在可以兼容旧版本，解析失败时会备份原文件，不再静默清空已启用插件记录。
+
+### 插件源
+
+- 下载的插件包现在会校验插件源公布的 SHA256 和文件大小，超过 100 MB 的插件包不再下载。
+- HTTP 插件源只有在提供 SHA256 校验值时才允许下载，添加 HTTP 插件源时会显示提示。
+- 版本比较改为 Debian 规则，正确处理 `1:2.0`、`1.0~beta` 等版本号；同一插件不再重复显示。
+- 修复无法读取 `SileoDepiction` 等字段的问题，加载失败时显示更准确的错误原因。
+- 插件包注入完成后会自动清理下载缓存。
+
+------
+
+## 4.3 Build 276 (2026-10-13) [EN]
+
+### Stability
+
+- Fixed possible injection corruption when TrollFools and the TrollStore integration CLI modified the same app at once; inject and eject now take a cross-process lock.
+- Fixed a crash when automatic reinjection inspected an app bundle that was still being replaced after an update.
+- Fixed uncancellable retries that could run more than ten reconciliations after one foreground event.
+- Auto-injection profiles stay readable across versions; an unreadable profile is backed up instead of being silently replaced with an empty one.
+
+### Repositories
+
+- Downloaded packages are verified against the SHA256 checksum and size published by the source; packages over 100 MB are refused before downloading.
+- HTTP sources can only be downloaded from when they publish SHA256 checksums, and a warning is shown when adding one.
+- Versions are compared with Debian rules (e.g. `1:2.0`, `1.0~beta`), and each package is listed once.
+- Fixed reading fields such as `SileoDepiction`, and loading failures now show a more accurate error.
+- Downloaded packages are removed from the cache after use.
+
 ## 4.3 Build 275 (2026-09-19)
 
 ### 紧急修复

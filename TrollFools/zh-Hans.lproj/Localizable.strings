@@ -361,3 +361,11 @@
 "The repository returned an invalid response." = "软件源返回了无效响应。";
 "Version" = "版本";
 
+
+"The downloaded package does not match the checksum published by the source." = "下载的插件包与插件源公布的校验值不一致。";
+
+"The downloaded package does not match the size published by the source." = "下载的插件包与插件源公布的文件大小不一致。";
+
+"This source uses insecure HTTP and does not publish a SHA256 checksum for the package, so it cannot be verified." = "该插件源使用不安全的 HTTP 连接，且未提供此插件包的 SHA256 校验值，无法验证其完整性。";
+
+"HTTP sources are not encrypted. Packages from this source can only be downloaded when it publishes a SHA256 checksum for them." = "HTTP 插件源未加密。只有当插件源为插件包提供 SHA256 校验值时，才能从中下载。";

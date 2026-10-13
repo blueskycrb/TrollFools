@@ -361,3 +361,11 @@
 "The repository returned an invalid response." = "The repository returned an invalid response.";
 "Version" = "Version";
 
+
+"The downloaded package does not match the checksum published by the source." = "The downloaded package does not match the checksum published by the source.";
+
+"The downloaded package does not match the size published by the source." = "The downloaded package does not match the size published by the source.";
+
+"This source uses insecure HTTP and does not publish a SHA256 checksum for the package, so it cannot be verified." = "This source uses insecure HTTP and does not publish a SHA256 checksum for the package, so it cannot be verified.";
+
+"HTTP sources are not encrypted. Packages from this source can only be downloaded when it publishes a SHA256 checksum for them." = "HTTP sources are not encrypted. Packages from this source can only be downloaded when it publishes a SHA256 checksum for them.";
